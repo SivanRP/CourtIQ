@@ -1,6 +1,14 @@
 # This .gitignore is appropriate for repositories deployed to GitHub Pages and using
 # a Gemfile as specified at https://github.com/github/pages-gem#conventional
 
+
+# Python
+__pycache__/
+*.pyc
+
+# IDEs
+.idea/
+
 # Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
 _site/
 .sass-cache/
@@ -9,6 +17,16 @@ _site/
 
 # Additional Ruby/bundler ignore for when you run: bundle install
 /vendor
+
+# Keys and dev-only files
+.env
+
+# Local database
+db.sqlite3
+
+
+node_modules/
+.next/
 
 # Specific ignore for GitHub Pages
 # GitHub Pages will always use its own deployed version of pages-gem 
