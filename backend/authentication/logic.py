@@ -103,6 +103,31 @@ def log_in(request):
         "password": password
     })
 
+@csrf_exempt
+def get_linked_athletes(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_response = supabase.auth.get_user(token)
+    if not user_response or not user_response.user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user_response.user.id
+
+    links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+    athlete_ids = [row["athlete_id"] for row in links.data]
+
+    if not athlete_ids:
+        return JsonResponse({"athletes": []})
+
+    athletes = supabase.table("profiles").select("*").in_("id", athlete_ids).execute()
+
+    return JsonResponse({"athletes": athletes.data})
+
 # RESET PASSWORD LOGIC: NEEDS REVIEW
 @csrf_exempt
 def reset_password(request):
