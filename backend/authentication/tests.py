@@ -83,3 +83,152 @@ class LinkedAthletesTest(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LinkAthleteTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.token = "test-staff-token"
+        self.staff_id = "staff-uuid-123"
+        self.athlete_id = "athlete-uuid-456"
+
+    def _auth_mock(self, mock_supabase):
+        user = MagicMock()
+        user.user.id = self.staff_id
+        mock_supabase.auth.get_user.return_value = user
+
+    @patch("authentication.logic.supabase")
+    def test_link_athlete_success(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
+
+        response = self.client.post(
+            "/api/auth/link/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+    @patch("authentication.logic.supabase")
+    def test_link_athlete_max_limit_enforced(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = (
+            [{"athlete_id": f"athlete-{i}"} for i in range(30)]
+        )
+
+        response = self.client.post(
+            "/api/auth/link/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Maximum athlete limit reached", response.json()["error"])
+
+    @patch("authentication.logic.supabase")
+    def test_link_athlete_already_linked(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
+            {"athlete_id": self.athlete_id}
+        ]
+
+        response = self.client.post(
+            "/api/auth/link/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("already linked", response.json()["error"])
+
+    @patch("authentication.logic.supabase")
+    def test_link_athlete_no_token(self, mock_supabase):
+        response = self.client.post(
+            "/api/auth/link/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("authentication.logic.supabase")
+    def test_link_athlete_missing_athlete_id(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
+
+        response = self.client.post(
+            "/api/auth/link/",
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
+class UnlinkAthleteTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.token = "test-staff-token"
+        self.staff_id = "staff-uuid-123"
+        self.athlete_id = "athlete-uuid-456"
+
+    def _auth_mock(self, mock_supabase):
+        user = MagicMock()
+        user.user.id = self.staff_id
+        mock_supabase.auth.get_user.return_value = user
+
+    @patch("authentication.logic.supabase")
+    def test_unlink_athlete_success(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/unlink/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+    @patch("authentication.logic.supabase")
+    def test_unlink_athlete_no_token(self, mock_supabase):
+        response = self.client.post(
+            "/api/auth/unlink/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("authentication.logic.supabase")
+    def test_unlink_athlete_missing_athlete_id(self, mock_supabase):
+        self._auth_mock(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/unlink/",
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("authentication.logic.supabase")
+    def test_unlink_athlete_invalid_token(self, mock_supabase):
+        mock_supabase.auth.get_user.return_value = None
+
+        response = self.client.post(
+            "/api/auth/unlink/",
+            data={"athlete_id": self.athlete_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer bad-token"
+        )
+
+        self.assertEqual(response.status_code, 401)

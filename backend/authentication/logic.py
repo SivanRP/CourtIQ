@@ -103,6 +103,66 @@ def log_in(request):
         "password": password
     })
 
+MAX_ATHLETES_PER_STAFF = 30
+
+@csrf_exempt
+def link_athlete(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_response = supabase.auth.get_user(token)
+    if not user_response or not user_response.user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user_response.user.id
+
+    data = json.loads(request.body)
+    athlete_id = data.get("athlete_id")
+    if not athlete_id:
+        return JsonResponse({"error": "athlete_id is required"}, status=400)
+
+    existing = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+
+    if len(existing.data) >= MAX_ATHLETES_PER_STAFF:
+        return JsonResponse({"error": "Maximum athlete limit reached"}, status=400)
+
+    if any(row["athlete_id"] == athlete_id for row in existing.data):
+        return JsonResponse({"error": "Athlete already linked"}, status=400)
+
+    supabase.table("staff_athletes").insert({"staff_id": staff_id, "athlete_id": athlete_id}).execute()
+
+    return JsonResponse({"status": "success"})
+
+
+@csrf_exempt
+def unlink_athlete(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_response = supabase.auth.get_user(token)
+    if not user_response or not user_response.user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user_response.user.id
+
+    data = json.loads(request.body)
+    athlete_id = data.get("athlete_id")
+    if not athlete_id:
+        return JsonResponse({"error": "athlete_id is required"}, status=400)
+
+    supabase.table("staff_athletes").delete().eq("staff_id", staff_id).eq("athlete_id", athlete_id).execute()
+
+    return JsonResponse({"status": "success"})
+
+
 @csrf_exempt
 def get_linked_athletes(request):
     if request.method != "GET":
