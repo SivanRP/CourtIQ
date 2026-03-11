@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id           String         @id @default(uuid())
+  username     String         @unique
+  firstName    String
+  lastName     String
+  email        String         @unique
+  role         String
+  staffLinks   StaffAthlete[] @relation("StaffLinks")
+  athleteLinks StaffAthlete[] @relation("AthleteLinks")
+}
+
+model StaffAthlete {
+  id        String   @id @default(uuid())
+  staffId   String
+  athleteId String
+  roleType  String
+  linkedAt  DateTime @default(now())
+
+  staff   Profile @relation("StaffLinks", fields: [staffId], references: [id])
+  athlete Profile @relation("AthleteLinks", fields: [athleteId], references: [id])
+
+  @@unique([staffId, athleteId])
+}
