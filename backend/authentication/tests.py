@@ -325,3 +325,90 @@ class LoginLogoutFlowTest(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LoginTokenUnitTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.token = "valid-token-xyz"
+
+    def _mock_profile(self, mock_supabase, email="user@example.com"):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
+            {"email": email}
+        ]
+
+    def _mock_session(self, mock_supabase):
+        session = MagicMock()
+        session.access_token = self.token
+        mock_supabase.auth.sign_in_with_password.return_value.session = session
+
+    @patch("authentication.logic.supabase")
+    def test_valid_login(self, mock_supabase):
+        self._mock_profile(mock_supabase)
+        self._mock_session(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"username": "jane", "password": "correctpass"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("token", response.json())
+
+    @patch("authentication.logic.supabase")
+    def test_invalid_password(self, mock_supabase):
+        self._mock_profile(mock_supabase)
+        mock_supabase.auth.sign_in_with_password.return_value.session = None
+
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"username": "jane", "password": "wrongpass"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("error", response.json())
+
+    @patch("authentication.logic.supabase")
+    def test_missing_username(self, mock_supabase):
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"password": "pass123"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("authentication.logic.supabase")
+    def test_missing_password(self, mock_supabase):
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"username": "jane"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("authentication.logic.supabase")
+    def test_expired_token_on_protected_endpoint(self, mock_supabase):
+        mock_supabase.auth.get_user.side_effect = Exception("JWT expired")
+
+        response = self.client.get(
+            "/api/auth/athletes/",
+            HTTP_AUTHORIZATION="Bearer expired-token"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("authentication.logic.supabase")
+    def test_expired_token_on_logout(self, mock_supabase):
+        mock_supabase.auth.get_user.side_effect = Exception("JWT expired")
+
+        response = self.client.post(
+            "/api/auth/logout/",
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer expired-token"
+        )
+
+        self.assertEqual(response.status_code, 401)

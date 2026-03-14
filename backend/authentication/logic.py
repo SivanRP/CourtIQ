@@ -14,6 +14,13 @@ supabase_key = env_variables["SUPABASE_DATABASE_KEY"]
 
 supabase = create_client(supabase_url, supabase_key)
 
+def get_user_from_token(token):
+    try:
+        response = supabase.auth.get_user(token)
+        return response.user if response else None
+    except Exception:
+        return None
+
 # NEEDS DISCUSSION
 def password_for_signup_is_valid(password):
     print()
@@ -117,8 +124,8 @@ def log_out(request):
     if not token:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    user_response = supabase.auth.get_user(token)
-    if not user_response or not user_response.user:
+    user = get_user_from_token(token)
+    if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     supabase.auth.sign_out()
@@ -136,11 +143,11 @@ def link_athlete(request):
     if not token:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    user_response = supabase.auth.get_user(token)
-    if not user_response or not user_response.user:
+    user = get_user_from_token(token)
+    if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    staff_id = user_response.user.id
+    staff_id = user.id
 
     data = json.loads(request.body)
     athlete_id = data.get("athlete_id")
@@ -169,11 +176,11 @@ def unlink_athlete(request):
     if not token:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    user_response = supabase.auth.get_user(token)
-    if not user_response or not user_response.user:
+    user = get_user_from_token(token)
+    if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    staff_id = user_response.user.id
+    staff_id = user.id
 
     data = json.loads(request.body)
     athlete_id = data.get("athlete_id")
@@ -194,11 +201,11 @@ def get_linked_athletes(request):
     if not token:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    user_response = supabase.auth.get_user(token)
-    if not user_response or not user_response.user:
+    user = get_user_from_token(token)
+    if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    staff_id = user_response.user.id
+    staff_id = user.id
 
     links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
     athlete_ids = [row["athlete_id"] for row in links.data]
