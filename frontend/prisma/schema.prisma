@@ -8,14 +8,37 @@ datasource db {
 }
 
 model Profile {
-  id           String         @id @default(uuid())
-  username     String         @unique
-  firstName    String
-  lastName     String
-  email        String         @unique
-  role         String
-  staffLinks   StaffAthlete[] @relation("StaffLinks")
-  athleteLinks StaffAthlete[] @relation("AthleteLinks")
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  firstName          String
+  lastName           String
+  email              String              @unique
+  role               String
+  staffLinks         StaffAthlete[]      @relation("StaffLinks")
+  athleteLinks       StaffAthlete[]      @relation("AthleteLinks")
+  sessions           Session[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  profileId String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  profile Profile @relation(fields: [profileId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  profileId String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  profile Profile @relation(fields: [profileId], references: [id])
 }
 
 model StaffAthlete {
