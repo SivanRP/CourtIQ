@@ -5,6 +5,7 @@ from . import logic
 urlpatterns = [
     path("signup/", logic.sign_up),
     path("login/", logic.log_in),
+    path("logout/", logic.log_out),
     path("link/", logic.link_athlete),
     path("unlink/", logic.unlink_athlete),
     path("athletes/", logic.get_linked_athletes),

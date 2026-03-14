@@ -232,3 +232,96 @@ class UnlinkAthleteTest(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LoginLogoutFlowTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.token = "session-token-abc"
+
+    def _mock_profile(self, mock_supabase, email="jane@example.com"):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
+            {"email": email}
+        ]
+
+    def _mock_session(self, mock_supabase):
+        session = MagicMock()
+        session.access_token = self.token
+        mock_supabase.auth.sign_in_with_password.return_value.session = session
+
+    def _mock_auth_user(self, mock_supabase):
+        user = MagicMock()
+        user.user.id = "user-uuid-123"
+        mock_supabase.auth.get_user.return_value = user
+
+    @patch("authentication.logic.supabase")
+    def test_login_returns_token(self, mock_supabase):
+        self._mock_profile(mock_supabase)
+        self._mock_session(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"username": "jane", "password": "pass123"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["token"], self.token)
+
+    @patch("authentication.logic.supabase")
+    def test_login_invalid_credentials_rejected(self, mock_supabase):
+        self._mock_profile(mock_supabase)
+        mock_supabase.auth.sign_in_with_password.return_value.session = None
+
+        response = self.client.post(
+            "/api/auth/login/",
+            data={"username": "jane", "password": "wrongpass"},
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("authentication.logic.supabase")
+    def test_authenticated_user_can_access_dashboard(self, mock_supabase):
+        self._mock_auth_user(mock_supabase)
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
+
+        response = self.client.get(
+            "/api/auth/athletes/",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    @patch("authentication.logic.supabase")
+    def test_logout_succeeds_with_valid_token(self, mock_supabase):
+        self._mock_auth_user(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/logout/",
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+    @patch("authentication.logic.supabase")
+    def test_logout_without_token_rejected(self, mock_supabase):
+        response = self.client.post(
+            "/api/auth/logout/",
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("authentication.logic.supabase")
+    def test_dashboard_inaccessible_after_logout(self, mock_supabase):
+        mock_supabase.auth.get_user.return_value = None
+
+        response = self.client.get(
+            "/api/auth/athletes/",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}"
+        )
+
+        self.assertEqual(response.status_code, 401)

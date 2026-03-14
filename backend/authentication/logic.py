@@ -103,6 +103,28 @@ def log_in(request):
         "password": password
     })
 
+    if not auth_response.session:
+        return JsonResponse({"error": "Invalid credentials"}, status=401)
+
+    return JsonResponse({"token": auth_response.session.access_token})
+
+@csrf_exempt
+def log_out(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_response = supabase.auth.get_user(token)
+    if not user_response or not user_response.user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    supabase.auth.sign_out()
+
+    return JsonResponse({"status": "success"})
+
 MAX_ATHLETES_PER_STAFF = 30
 
 @csrf_exempt
