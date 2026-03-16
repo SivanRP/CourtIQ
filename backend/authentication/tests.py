@@ -515,3 +515,85 @@ class SignUpFlowTest(SimpleTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Failed to save profile", response.json()["error"])
+
+
+class ValidationAndDuplicateTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.valid_payload = {
+            "username": "jsmith",
+            "first_name": "John",
+            "last_name": "Smith",
+            "email": "john@example.com",
+            "password": "SecurePass1!",
+            "verify_password": "SecurePass1!",
+            "role": "athlete",
+        }
+
+    @patch("authentication.logic.supabase")
+    def test_username_is_unique_returns_false_when_taken(self, mock_supabase):
+        from authentication.logic import username_is_unique
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = MagicMock()
+
+        result = username_is_unique("taken_user")
+
+        self.assertFalse(result)
+
+    @patch("authentication.logic.supabase")
+    def test_username_is_unique_returns_true_when_free(self, mock_supabase):
+        from authentication.logic import username_is_unique
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = None
+
+        result = username_is_unique("new_user")
+
+        self.assertTrue(result)
+
+    @patch("authentication.logic.password_for_signup_is_valid", return_value=True)
+    @patch("authentication.logic.username_is_unique", return_value=False)
+    @patch("authentication.logic.supabase")
+    def test_signup_duplicate_username_rejected(self, mock_supabase, _mock_unique, _mock_valid):
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=self.valid_payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Username is not unique", response.json()["error"])
+
+    @patch("authentication.logic.password_for_signup_is_valid", return_value=True)
+    @patch("authentication.logic.username_is_unique", return_value=True)
+    @patch("authentication.logic.supabase")
+    def test_signup_duplicate_email_rejected(self, mock_supabase, _mock_unique, _mock_valid):
+        mock_supabase.auth.sign_up.return_value.user = None
+
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=self.valid_payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("authentication.logic.supabase")
+    def test_signup_empty_string_fields_rejected(self, mock_supabase):
+        for field in ["username", "first_name", "last_name", "email", "password", "role"]:
+            payload = {**self.valid_payload, field: ""}
+
+            response = self.client.post(
+                "/api/auth/signup/",
+                data=payload,
+                content_type="application/json"
+            )
+
+            self.assertEqual(response.status_code, 400, msg=f"Expected 400 when {field} is empty string")
+
+    @patch("authentication.logic.supabase")
+    def test_signup_wrong_method_rejected(self, mock_supabase):
+        response = self.client.get(
+            "/api/auth/signup/",
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("POST request required", response.json()["error"])
