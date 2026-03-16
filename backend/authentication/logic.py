@@ -70,7 +70,7 @@ def sign_up(request):
     user = auth_response.user
 
     if not user:
-        return JsonResponse({"error": auth_response}, status=400)
+        return JsonResponse({"error": "Failed to create account"}, status=400)
 
     insert_response = supabase.table("profiles").insert({
         "id": user.id,

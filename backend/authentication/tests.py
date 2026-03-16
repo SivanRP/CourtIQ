@@ -412,3 +412,106 @@ class LoginTokenUnitTest(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class SignUpFlowTest(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.valid_payload = {
+            "username": "jsmith",
+            "first_name": "John",
+            "last_name": "Smith",
+            "email": "john@example.com",
+            "password": "SecurePass1!",
+            "verify_password": "SecurePass1!",
+            "role": "athlete",
+        }
+
+    def _mock_successful_signup(self, mock_supabase):
+        user = MagicMock()
+        user.id = "new-user-uuid"
+        mock_supabase.auth.sign_up.return_value.user = user
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
+        insert = MagicMock()
+        insert.status_code = 201
+        insert.data = [{"id": user.id}]
+        mock_supabase.table.return_value.insert.return_value.execute.return_value = insert
+
+    @patch("authentication.logic.password_for_signup_is_valid", return_value=True)
+    @patch("authentication.logic.username_is_unique", return_value=True)
+    @patch("authentication.logic.supabase")
+    def test_full_signup_flow_succeeds(self, mock_supabase, _mock_unique, _mock_valid):
+        self._mock_successful_signup(mock_supabase)
+
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=self.valid_payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        mock_supabase.auth.sign_up.assert_called_once()
+        mock_supabase.table.return_value.insert.return_value.execute.assert_called_once()
+
+    @patch("authentication.logic.supabase")
+    def test_signup_missing_required_field(self, mock_supabase):
+        for field in ["username", "first_name", "last_name", "email", "password", "role"]:
+            payload = {**self.valid_payload, "verify_password": self.valid_payload["password"]}
+            del payload[field]
+
+            response = self.client.post(
+                "/api/auth/signup/",
+                data=payload,
+                content_type="application/json"
+            )
+
+            self.assertEqual(response.status_code, 400, msg=f"Expected 400 when {field} is missing")
+
+    @patch("authentication.logic.supabase")
+    def test_signup_passwords_do_not_match(self, mock_supabase):
+        payload = {**self.valid_payload, "verify_password": "DifferentPass1!"}
+
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Passwords don't match", response.json()["error"])
+
+    @patch("authentication.logic.password_for_signup_is_valid", return_value=True)
+    @patch("authentication.logic.username_is_unique", return_value=True)
+    @patch("authentication.logic.supabase")
+    def test_signup_supabase_auth_failure(self, mock_supabase, _mock_unique, _mock_valid):
+        mock_supabase.auth.sign_up.return_value.user = None
+
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=self.valid_payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("authentication.logic.password_for_signup_is_valid", return_value=True)
+    @patch("authentication.logic.username_is_unique", return_value=True)
+    @patch("authentication.logic.supabase")
+    def test_signup_profile_insert_failure(self, mock_supabase, _mock_unique, _mock_valid):
+        user = MagicMock()
+        user.id = "new-user-uuid"
+        mock_supabase.auth.sign_up.return_value.user = user
+        insert = MagicMock()
+        insert.status_code = 500
+        insert.data = []
+        mock_supabase.table.return_value.insert.return_value.execute.return_value = insert
+
+        response = self.client.post(
+            "/api/auth/signup/",
+            data=self.valid_payload,
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Failed to save profile", response.json()["error"])
