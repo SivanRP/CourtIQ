@@ -7,38 +7,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Profile {
-  id                 String              @id @default(uuid())
-  username           String              @unique
-  firstName          String
-  lastName           String
-  email              String              @unique
-  role               String
-  staffLinks         StaffAthlete[]      @relation("StaffLinks")
-  athleteLinks       StaffAthlete[]      @relation("AthleteLinks")
-  sessions           Session[]
+enum Role {
+  ATHLETE
+  HEAD_COACH
+  COACHING_STAFF
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  profile             Profile?
+  sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+}
+
+model Profile {
+  id           String         @id @default(uuid())
+  userId       String         @unique
+  username     String         @unique
+  firstName    String
+  lastName     String
+  staffLinks   StaffAthlete[] @relation("StaffLinks")
+  athleteLinks StaffAthlete[] @relation("AthleteLinks")
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Session {
   id        String   @id @default(uuid())
-  profileId String
+  userId    String
   token     String   @unique
   createdAt DateTime @default(now())
   expiresAt DateTime
 
-  profile Profile @relation(fields: [profileId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model PasswordResetToken {
   id        String   @id @default(uuid())
-  profileId String
+  userId    String
   token     String   @unique
   createdAt DateTime @default(now())
   expiresAt DateTime
   used      Boolean  @default(false)
 
-  profile Profile @relation(fields: [profileId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model StaffAthlete {
