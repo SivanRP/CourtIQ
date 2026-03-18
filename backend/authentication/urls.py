@@ -1,5 +1,5 @@
 from django.urls import path
 from . import logic
 
-# NEEDS REVIEW
-urlpatterns = [path("signup/", logic.log_in), path("login/", logic.sign_up)]
+#URLs routes for user authentication: signup and log in
+urlpatterns = [path("signup/", logic.sign_up), path("login/", logic.log_in)]
