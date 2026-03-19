@@ -14,6 +14,13 @@ supabase_key = env_variables["SUPABASE_DATABASE_KEY"]
 
 supabase = create_client(supabase_url, supabase_key)
 
+def get_user_from_token(token):
+    try:
+        response = supabase.auth.get_user(token)
+        return response.user if response else None
+    except Exception:
+        return None
+
 # NEEDS DISCUSSION
 def password_for_signup_is_valid(password):
     print()
@@ -63,7 +70,7 @@ def sign_up(request):
     user = auth_response.user
 
     if not user:
-        return JsonResponse({"error": auth_response}, status=400)
+        return JsonResponse({"error": "Failed to create account"}, status=400)
 
     insert_response = supabase.table("profiles").insert({
         "id": user.id,
@@ -102,6 +109,113 @@ def log_in(request):
         "email": email,
         "password": password
     })
+
+    if not auth_response.session:
+        return JsonResponse({"error": "Invalid credentials"}, status=401)
+
+    return JsonResponse({"token": auth_response.session.access_token})
+
+@csrf_exempt
+def log_out(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    supabase.auth.sign_out()
+
+    return JsonResponse({"status": "success"})
+
+MAX_ATHLETES_PER_STAFF = 30
+
+@csrf_exempt
+def link_athlete(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user.id
+
+    data = json.loads(request.body)
+    athlete_id = data.get("athlete_id")
+    if not athlete_id:
+        return JsonResponse({"error": "athlete_id is required"}, status=400)
+
+    existing = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+
+    if len(existing.data) >= MAX_ATHLETES_PER_STAFF:
+        return JsonResponse({"error": "Maximum athlete limit reached"}, status=400)
+
+    if any(row["athlete_id"] == athlete_id for row in existing.data):
+        return JsonResponse({"error": "Athlete already linked"}, status=400)
+
+    supabase.table("staff_athletes").insert({"staff_id": staff_id, "athlete_id": athlete_id}).execute()
+
+    return JsonResponse({"status": "success"})
+
+
+@csrf_exempt
+def unlink_athlete(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user.id
+
+    data = json.loads(request.body)
+    athlete_id = data.get("athlete_id")
+    if not athlete_id:
+        return JsonResponse({"error": "athlete_id is required"}, status=400)
+
+    supabase.table("staff_athletes").delete().eq("staff_id", staff_id).eq("athlete_id", athlete_id).execute()
+
+    return JsonResponse({"status": "success"})
+
+
+@csrf_exempt
+def get_linked_athletes(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    staff_id = user.id
+
+    links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+    athlete_ids = [row["athlete_id"] for row in links.data]
+
+    if not athlete_ids:
+        return JsonResponse({"athletes": []})
+
+    athletes = supabase.table("profiles").select("*").in_("id", athlete_ids).execute()
+
+    return JsonResponse({"athletes": athletes.data})
 
 # RESET PASSWORD LOGIC: NEEDS REVIEW
 @csrf_exempt
