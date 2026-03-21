@@ -4,13 +4,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
 env_variables = {}
-with open(".env") as file:
+with open("../.env") as file:
     for line in file:
         key, value = line.strip().split("=",1)
         env_variables[key] = value.strip('"').strip("'")
 
-supabase_url = env_variables["SUPABASE_DATABASE_URL"]
-supabase_key = env_variables["SUPABASE_DATABASE_KEY"]
+supabase_url = env_variables["DATABASE_URL"]
+supabase_key = env_variables["DATABASE_KEY"]
 
 supabase = create_client(supabase_url, supabase_key)
 
@@ -21,18 +21,35 @@ def get_user_from_token(token):
     except Exception:
         return None
 
-# NEEDS DISCUSSION
-def password_for_signup_is_valid(password):
-    print()
 
-# NEEDS DISCUSSION
-# def username_for_signup_is_valid(username):
-#     print()
+def password_for_signup_is_valid(password):
+    if len(password) < 6:
+        return False
+
+    upper_present = False
+    lower_present = False
+    digit_present = False
+    special_char_present = False
+
+    for char in password:
+        if char.isupper():
+            upper_present = True
+        elif char.islower():
+            lower_present = True
+        elif char.isdigit():
+            digit_present = True
+        elif char in ".;:,-!?":
+            special_char_present = True
+
+    if upper_present and lower_present and digit_present and special_char_present:
+        return True
+    else:
+        return False
 
 def username_is_unique(username):
-    existing_username = supabase.table("profiles").select("id").eq("username", username).execute()
+    response = supabase.table("profiles").select("id").eq("username", username).execute()
 
-    return not existing_username
+    return not response.data
 
 # SIGN UP LOGIC: NEEDS REVIEW
 @csrf_exempt
@@ -55,7 +72,7 @@ def sign_up(request):
     if verify_password != password:
         return JsonResponse({"error": "Passwords don't match"}, status=400)
 
-    if not username_is_unique(password):
+    if not username_is_unique(username):
         return JsonResponse({"error": "Username is not unique"}, status=400)
 
     if not password_for_signup_is_valid(password):
@@ -77,7 +94,8 @@ def sign_up(request):
         "username": username,
         "first_name": first_name,
         "last_name": last_name,
-        "role": role
+        "role": role,
+        "email": email
     }).execute()
 
     if insert_response.status_code != 201 and not insert_response.data:
@@ -98,9 +116,9 @@ def log_in(request):
     if not username or not password:
         return JsonResponse({"error": "All fields are required"}, status=400)
 
-    profile = supabase.table("profiles").select("email").eq("username", username).execute()
+    profile = supabase.table("profiles").select("id, email").eq("username", username).execute()
 
-    if not profile:
+    if not profile.data:
         return JsonResponse({"error": "Invalid username"}, status=400)
 
     email = profile.data[0]["email"]
@@ -229,7 +247,7 @@ def reset_password(request):
     if not email:
         return JsonResponse({"error": "Email required"}, status=400)
 
-    response = supabase.auth.api.reset_password_for_email(email)
+    response = supabase.auth.reset_password_email(email)
 
     if response.get("error"):
         return JsonResponse({"error": response["error"].message}, status=400)
