@@ -10,12 +10,12 @@ export default function Dashboard() {
 
     return (
         <div className={`{lato.className} min-h-screen bg-[#121914]`}>
-            <nav className="w-full flex items-center justify-between px-8 py-4 bg-[#1a261e] border-b border-[#c8a84b33]">
+            <nav className="w-full flex items-center justify-between px-8 pt-2 pb-1 bg-[#1a261e] border-b border-[#c8a84b33]">
                 <Image
                     src="/CourtIQlogo.png"
                     alt="CourtIQ Logo"
-                    width={150}
-                    height={60}
+                    width={187.5}
+                    height={75}
                     priority
                 />
             
