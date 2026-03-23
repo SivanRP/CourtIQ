@@ -1,3 +1,4 @@
+import { useRouter } from "next/router";
 import Image from "next/image";
 import { useState } from "react";
 import { Lato, Yeseva_One } from "next/font/google";
@@ -7,10 +8,12 @@ const lato = Lato({subsets: ["latin"], weight: ["400", "700"]})
 const yesevaOne = Yeseva_One({subsets: ["latin"], weight: ["400"]})
 
 export default function LoginSignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [form, setForm] = useState({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async () => {
     setErrors({});
@@ -24,6 +27,7 @@ export default function LoginSignupPage() {
     if (response.ok) {
       setIsSignUp(false);
       setForm({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
+      setSuccess("Signup successful");
     } else {
       if (result.error == "Username is not unique") {
         setErrors({username: "* Username is already taken *"});
@@ -47,7 +51,7 @@ export default function LoginSignupPage() {
     if (response.ok) {
       const token = result.token;
       localStorage.setItem("token", token);
-      // Redirect to dashboard
+      router.push("/dashboard");
     } else {
       if (result.error == "Invalid username") {
         setErrors({username: "* An account with this username does not exist *"})
@@ -87,9 +91,9 @@ export default function LoginSignupPage() {
                 onChange={evt => {setForm(prev => ({...prev, role: evt.target.value})); evt.target.blur();}}
                 className="w-full px-4 py-3 bg-[#121914] border border-[#c8a84b33] rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2 cursor-pointer appearance-none">
                 <option value="">Select a role</option>
-                <option value="athlete">Athlete</option>
-                <option value="headCoach">Head Coach</option>
-                <option value="coachingStaff">Coaching Staff</option>
+                <option value="ATHLETE">Athlete</option>
+                <option value="HEAD_COACH">Head Coach</option>
+                <option value="COACHING_STAFF">Coaching Staff</option>
               </select>
             </div>
 
@@ -201,6 +205,23 @@ export default function LoginSignupPage() {
           </button>
         </div>
       </div>
+      {success && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-[#121914] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
+            <h3 className="text-white text-lg font-bold mb-2">
+              You are all signed up!
+            </h3>
+            <p className="text-[#9cbcd9] text-sm mb-6">
+              Please proceed to login by clicking continue.
+            </p>
+            <button
+              onClick={() => setSuccess("")}
+              className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-lg font-bold text-sm hover:scale-105 transition">
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
