@@ -14,6 +14,7 @@ export default function LoginSignupPage() {
   const [form, setForm] = useState({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleSubmit = async () => {
     setErrors({});
@@ -62,6 +63,10 @@ export default function LoginSignupPage() {
       }
     }
   }
+};
+
+const handleForgotPassword = async () => {
+  setErrors({});
 };
 
   return (
@@ -163,8 +168,46 @@ export default function LoginSignupPage() {
               {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
             </button>
           </div>
-          {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
+
+          <div className="h-0">
+            {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
+          </div>
         </div>
+        
+        {!isSignUp && (
+          <button
+            onClick={() => setShowForgotPassword(true)}
+            className="text-[#9cbcd9] text-xs font-bold -mt-3 mr-1 text-right cursor-pointer transition-transform hover:scale-103 active:scale-100 origin-right active:brightness-75">
+            Forgot Password?
+          </button>
+        )}
+
+
+        {showForgotPassword && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+            <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
+              <h2 className="text-white text-lg mb-4">
+                Reset Password
+              </h2>
+              <input
+                placeholder="Enter your email"
+                onChange={(e) => setForm(prev => ({...prev, email: e.target.value}))}
+                onKeyDown={evt => {if (evt.key == "Enter") evt.currentTarget.blur()}}
+                className="w-full px-4 py-3 mb-1 bg-[#121914] border border-[#c8a84b33] rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2"
+              />
+              <button
+                onClick={handleForgotPassword}
+                className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest cursor-pointer mt-2 transition-transform hover:scale-102 active:scale-100 active:brightness-75">
+                Send Reset Link
+              </button>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className = "text-sm text-white mt-3">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {isSignUp && (
           <>
@@ -205,14 +248,15 @@ export default function LoginSignupPage() {
           </button>
         </div>
       </div>
+
       {success && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-[#121914] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
+          <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
             <h3 className="text-white text-lg font-bold mb-2">
               You are all signed up!
             </h3>
             <p className="text-[#9cbcd9] text-sm mb-6">
-              Please proceed to login by clicking continue.
+              Please click continue to proceed to login.
             </p>
             <button
               onClick={() => setSuccess("")}
@@ -222,6 +266,7 @@ export default function LoginSignupPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
