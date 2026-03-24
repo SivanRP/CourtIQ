@@ -67,6 +67,18 @@ export default function LoginSignupPage() {
 
 const handleForgotPassword = async () => {
   setErrors({});
+  const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({email: form.email}),
+  });
+  const result = await response.json();
+  if (response.ok) {
+    setShowForgotPassword(false);
+    setSuccess("Password reset email sent! Please check your inbox.");
+  } else {
+    setErrors({general: "* " + result.error + " *"})
+  }
 };
 
   return (
