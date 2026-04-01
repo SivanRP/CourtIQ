@@ -359,12 +359,42 @@ def reset_password(request):
     if not email:
         return JsonResponse({"error": "Email required"}, status=400)
 
-    response = supabase.auth.reset_password_email(email)
+    try:
+        supabase.auth.reset_password_email(email)
+    except AuthApiError as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
-    if response.get("error"):
-        return JsonResponse({"error": response["error"].message}, status=400)
-    else:
-        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "success"})
+
+#Update Password Logic:
+# - Validates the recovery token sent from the reset email
+# - Validates the new password meets requirements
+# - Updates the user's password in Supabase Auth
+@csrf_exempt
+def update_password(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    data = json.loads(request.body)
+    token = data.get("token")
+    new_password = data.get("new_password")
+
+    if not token or not new_password:
+        return JsonResponse({"error": "All fields are required"}, status=400)
+
+    if not password_for_signup_is_valid(new_password):
+        return JsonResponse({"error": "Password does not meet requirements"}, status=400)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Invalid or expired token"}, status=401)
+
+    try:
+        supabase.auth.update_user({"password": new_password})
+    except AuthApiError as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"status": "success"})
 
 
 
