@@ -2,7 +2,7 @@ import json
 from supabase import create_client
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from datetime import *
+from datetime import datetime, timedelta
 
 #Parsing the .env file to get the key and the URL of the database
 env_variables = {}
@@ -205,3 +205,108 @@ def get_rejected_events(request):
         return JsonResponse({"events": []})
 
     return JsonResponse({"events": events})
+
+
+@csrf_exempt
+def get_statistics(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    period = request.GET.get("period", "week")
+    athlete_id = request.GET.get("athlete_id", user.id)
+
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
+
+    if role == "ATHLETE":
+        athlete_id = user.id
+
+    now = datetime.utcnow()
+
+    if period == "week":
+        start_date = (now - timedelta(days=7)).isoformat()
+    elif period == "month":
+        start_date = (now - timedelta(days=30)).isoformat()
+    else:
+        return JsonResponse({"error": "Invalid period. Use 'week' or 'month'"}, status=400)
+
+    logs = supabase.table("activity_logs").select("*").eq(
+        "athlete_id", athlete_id
+    ).gte("date", start_date).execute()
+
+    match_stats = supabase.table("match_statistics").select("*").eq(
+        "athlete_id", athlete_id
+    ).gte("match_date", start_date).execute()
+
+    return JsonResponse({
+        "period": period,
+        "activity_logs": logs.data,
+        "match_statistics": match_stats.data
+    })
+
+
+@csrf_exempt
+def get_weekly_summary(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    data = json.loads(request.body)
+    start_of_week = data.get("start_of_week")
+    end_of_week = data.get("end_of_week")
+    athlete_id = data.get("athlete_id")
+
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
+
+    if role == "ATHLETE":
+        athlete_id = user.id
+
+    if not start_of_week or not end_of_week:
+        return JsonResponse({"error": "Missing information"}, status=400)
+
+    if not athlete_id:
+        return JsonResponse({"error": "Missing athlete_id"}, status=400)
+
+    logs = supabase.table("activity_logs").select(
+        "load, fatigue, mental_score"
+    ).eq("athlete_id", athlete_id).gte("date", start_of_week).lt(
+        "date", end_of_week
+    ).execute()
+
+    if not logs.data:
+        return JsonResponse({
+            "summary": {
+                "average_load": 0,
+                "average_fatigue": 0,
+                "average_mental_score": 0
+            }
+        })
+
+    total = len(logs.data)
+    avg_load = sum(log["load"] for log in logs.data) / total
+    avg_fatigue = sum(log["fatigue"] for log in logs.data) / total
+    avg_mental = sum(log["mental_score"] for log in logs.data) / total
+
+    return JsonResponse({
+        "summary": {
+            "average_load": round(avg_load, 2),
+            "average_fatigue": round(avg_fatigue, 2),
+            "average_mental_score": round(avg_mental, 2)
+        }
+    })
