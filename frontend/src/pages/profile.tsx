@@ -69,6 +69,57 @@ export default function ProfilePage() {
                     </button>
                 </div>
             </nav>
+            <div className="max-w-4xl mx-auto mt-10 px-6">
+
+                {/* Profile Info */}
+                <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 mb-6">
+                    <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
+                    Profile Info
+                    </h2>
+
+                    <div className="space-y-3 text-white">
+                    <p><span className="text-[#9cbcd9]">Name:</span> First Last</p>
+                    <p><span className="text-[#9cbcd9]">Username:</span> username</p>
+                    <p><span className="text-[#9cbcd9]">Email:</span> username@email.com</p>
+                    <p><span className="text-[#9cbcd9]">Role:</span> Athlete</p>
+                    </div>
+                </div>
+
+                {/* Linked Staff */}
+                <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 mb-6">
+                    <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
+                    Linked Staff
+                    </h2>
+
+                    <ul className="space-y-2 text-white">
+                    <li className="flex justify-between">
+                        Coach Name
+                        <button className="text-[#d5d131] text-sm">Remove</button>
+                    </li>
+                    <li className="flex justify-between">
+                        Trainer Name
+                        <button className="text-[#d5d131] text-sm">Remove</button>
+                    </li>
+                    </ul>
+                </div>
+
+                {/* Manage Access */}
+                <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 mb-10">
+                    <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
+                    Manage Access
+                    </h2>
+
+                    <div className="flex gap-3">
+                    <input
+                        placeholder="Enter staff ID"
+                        className="flex-1 px-4 py-2 bg-[#121914] border border-[#c8a84b33] rounded-xl text-white outline-none"
+                    />
+                    <button className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold cursor-pointer transition-transform hover:scale-105 active:scale-100 active:brightness-75">
+                        Add
+                    </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
