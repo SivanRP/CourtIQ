@@ -27,7 +27,7 @@ const getProfileInfoTitle = (role: string) => {
 const getLinkedTitle = (role: string) => {
     if (role === "ATHLETE") return "Linked Staff";
     if (role === "HEAD_COACH" || role === "COACHING_STAFF") return "Linked Athletes";
-    return "Linked Users";
+    return "Linked";
 }
 
 export default function ProfilePage() {
@@ -35,9 +35,11 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [searchUsername, setSearchUsername] = useState("");
     const [linked, setLinked] = useState<any[]>([]);
+    const [loadingLinked, setLoadingLinked] = useState(true);
     const [errors, setErrors] = useState<Record<string, string>>({});
     
     const fetchLinked = async (role: string) => {
+        setLoadingLinked(true);
         const token = localStorage.getItem("token");
 
         const response = await fetch("http://localhost:8000/api/auth/linked/", {
@@ -54,10 +56,11 @@ export default function ProfilePage() {
                 setLinked(data.athletes);
             }
         }
+        setLoadingLinked(false);
     };
 
     useEffect(() => {
-        const fetchprofile = async () => {
+        const fetchProfile = async () => {
             const response = await getAuth("http://localhost:8000/api/auth/get_profile/", {method: "GET"},  router);
             if (!response) return;
             const data = await response.json();
@@ -69,7 +72,7 @@ export default function ProfilePage() {
             }
         };
 
-        fetchprofile();
+        fetchProfile();
     }, []);
 
     useEffect(() => {
@@ -126,7 +129,11 @@ export default function ProfilePage() {
                         className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
                         Dashboard
                     </button>
-                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
+                    <button 
+                        onClick={ () => {
+                            router.push("/schedule");
+                        }}
+                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
                         Schedule
                     </button>
                     <button 
@@ -175,12 +182,14 @@ export default function ProfilePage() {
                         {getLinkedTitle(profile ? profile.role : "")}
                     </h2>
                     <ul className="space-y-2 text-white">
-                        {linked.length === 0 ? (
-                            <p className="text-gray-400 text-sm">No linked staff</p>
+                        {loadingLinked ? (
+                            <p className="text-gray-400 text-sm">...</p>
+                        ) : linked.length === 0 ? (
+                            <p className="text-gray-400 text-sm">No linked users</p>
                         ) : (
-                            linked.map((staff) => (
-                                <li key={staff.id} className="flex justify-between">
-                                    {staff.first_name} {staff.last_name}
+                            linked.map((user) => (
+                                <li key={user.id} className="flex justify-between">
+                                    {user.first_name} {user.last_name}
                                     <button className="text-[#d5d131] text-sm">
                                         Remove
                                     </button>
