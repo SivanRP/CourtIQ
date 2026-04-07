@@ -67,6 +67,18 @@ export default function LoginSignupPage() {
 
 const handleForgotPassword = async () => {
   setErrors({});
+  const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({email: form.email}),
+  });
+  const result = await response.json();
+  if (response.ok) {
+    setShowForgotPassword(false);
+    setSuccess("Password reset email sent! Please check your inbox.");
+  } else {
+    setErrors({general: "* " + result.error + " *"})
+  }
 };
 
   return (
@@ -167,20 +179,18 @@ const handleForgotPassword = async () => {
             >
               {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
             </button>
+            {!isSignUp && (
+              <button
+                onClick={() => setShowForgotPassword(true)}
+                className="absolute right-1 -mt-5 text-[#9cbcd9] text-xs font-bold text-right cursor-pointer transition-transform hover:scale-103 active:scale-100 origin-right active:brightness-75">
+                Forgot Password?
+              </button>
+            )}
           </div>
-
-          <div className="h-0">
-            {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
-          </div>
+          {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
         </div>
         
-        {!isSignUp && (
-          <button
-            onClick={() => setShowForgotPassword(true)}
-            className="text-[#9cbcd9] text-xs font-bold -mt-3 mr-1 text-right cursor-pointer transition-transform hover:scale-103 active:scale-100 origin-right active:brightness-75">
-            Forgot Password?
-          </button>
-        )}
+        
 
 
         {showForgotPassword && (

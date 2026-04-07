@@ -6,7 +6,8 @@ urlpatterns = [
     path("signup/", logic.sign_up),
     path("login/", logic.log_in),
     path("logout/", logic.log_out),
-    path("link/", logic.link_athlete),
+    path("get_profile/", logic.get_profile),
+    path("link/", logic.link_users),
     path("unlink/", logic.unlink_athlete),
-    path("athletes/", logic.get_linked_athletes),
+    path("linked/", logic.get_linked),
 ]

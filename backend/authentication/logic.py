@@ -183,14 +183,38 @@ def log_out(request):
 
 MAX_ATHLETES_PER_STAFF = 30
 
-#Link Athlete Logic:
-# - Validates the token and the user
-# - Checks if the athlete with the athlete id was already linked
-# - Checks if the limit for athlete linkage is exceeded
-# - Checks if the field with the athlete is filled
-# - If all validations are passed, inserts the athlete-staff pair into the "staff_athletes" table
+
 @csrf_exempt
-def link_athlete(request):
+def get_profile(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    profile = supabase.table("profiles").select("*").eq("id", user.id).execute()
+
+    if not profile.data:
+        return JsonResponse({"error": "Profile not found"}, status=404)
+
+    return JsonResponse({"profile": profile.data[0]})
+
+
+#Link Athlete-Staff Logic: (SC)
+# - Validates the token and the user
+# - Determines if the user is staff or athlete based on the role in the "profiles" table
+# - Retrieves the athlete or staff id based on the username provided in the request body
+# - Validates that the athlete or staff exists
+# - Validates that the athlete-staff pair is not already linked# - Validates that the staff member has not exceeded the limit of linked athletes
+# - Validates that the athlete and staff fields are filled in the request body
+# - If all validations are passed, inserts the relationship into the "staff_athletes" table
+@csrf_exempt
+def link_users(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required"}, status=400)
 
@@ -205,18 +229,47 @@ def link_athlete(request):
     staff_id = user.id
 
     data = json.loads(request.body)
-    athlete_id = data.get("athlete_id")
-    if not athlete_id:
-        return JsonResponse({"error": "athlete_id is required"}, status=400)
+    username = data.get("username")
 
-    existing = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+    if not username:
+        return JsonResponse({"error": "Username required"}, status=400)
+    
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
 
-    if len(existing.data) >= MAX_ATHLETES_PER_STAFF:
-        return JsonResponse({"error": "Maximum athlete limit reached"}, status=400)
+    if role in ["HEAD_COACH", "COACHING_STAFF"]:
+        staff_id = user.id
 
-    if any(row["athlete_id"] == athlete_id for row in existing.data):
+        athlete = supabase.table("profiles").select("id").eq("username", username).execute()
+
+        if not athlete.data:
+            return JsonResponse({"error": "Athlete not found"}, status=404)
+
+        athlete_id = athlete.data[0]["id"]
+
+    elif role == "ATHLETE":
+        athlete_id = user.id
+
+        staff = supabase.table("profiles").select("id").eq("username", username).execute()
+
+        if not staff.data:
+            return JsonResponse({"error": "Staff not found"}, status=404)
+
+        staff_id = staff.data[0]["id"]
+
+    else:
+        return JsonResponse({"error": "Invalid role"}, status=400)
+    
+    existing = supabase.table("staff_athletes").select("id").eq("staff_id", staff_id).eq("athlete_id", athlete_id).execute()
+
+    if existing.data:
         return JsonResponse({"error": "Athlete already linked"}, status=400)
 
+    all_links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
+    
+    if len(all_links.data) >= MAX_ATHLETES_PER_STAFF:
+        return JsonResponse({"error": "Maximum athlete limit reached"}, status=400)
+    
     supabase.table("staff_athletes").insert({"staff_id": staff_id, "athlete_id": athlete_id}).execute()
 
     return JsonResponse({"status": "success"})
@@ -249,11 +302,11 @@ def unlink_athlete(request):
 
     return JsonResponse({"status": "success"})
 
-# Get Linked Athletes Logic:
-# - Retrieves all athletes linked to the authenticated staff
-# - Returns list of athlete profiles
+# Get Linked Logic:
+# - Retrieves all users linked to the authenticated staff or athlete
+# - Returns list of athlete profiles for a staff member or list of staff profiles for an athlete
 @csrf_exempt
-def get_linked_athletes(request):
+def get_linked(request):
     if request.method != "GET":
         return JsonResponse({"error": "GET request required"}, status=400)
 
@@ -265,17 +318,32 @@ def get_linked_athletes(request):
     if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    staff_id = user.id
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
 
-    links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", staff_id).execute()
-    athlete_ids = [row["athlete_id"] for row in links.data]
+    if role in ["HEAD_COACH", "COACHING_STAFF"]:
+        links = supabase.table("staff_athletes").select("athlete_id").eq("staff_id", user.id).execute()
 
-    if not athlete_ids:
-        return JsonResponse({"athletes": []})
+        athlete_ids = [row["athlete_id"] for row in links.data]
 
-    athletes = supabase.table("profiles").select("*").in_("id", athlete_ids).execute()
+        if not athlete_ids:
+            return JsonResponse({"athletes": []})
 
-    return JsonResponse({"athletes": athletes.data})
+        athletes = supabase.table("profiles").select("*").in_("id", athlete_ids).execute()
+
+        return JsonResponse({"athletes": athletes.data})
+    
+    elif role == "ATHLETE":
+        links = supabase.table("staff_athletes").select("staff_id").eq("athlete_id", user.id).execute()
+
+        staff_ids = [row["staff_id"] for row in links.data]
+
+        if not staff_ids:
+            return JsonResponse({"staff": []})  # reuse same key
+
+        staff = supabase.table("profiles").select("*").in_("id", staff_ids).execute()
+
+        return JsonResponse({"staff": staff.data})
 
 #Reset Password Logic:
 # - Resetting password using supabase.auth

@@ -20,13 +20,17 @@ export default function Dashboard() {
                 />
             
                 <div className="flex items-center gap-6">
+                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer px-5 h-18 bg-[#121914] border-b border-[#c8a84b33] border-2">
+                        Dashboard
+                    </button>
                     <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
                         Schedule
                     </button>
-                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Performance
-                    </button>
-                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
+                    <button 
+                        onClick={ () => {
+                            router.push("/profile");
+                        }}
+                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
                         Profile
                     </button>
                     <button 
