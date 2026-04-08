@@ -73,7 +73,10 @@ def create_event(request):
     if not check_events_overlap(user_id, start_time, end_time):
         return JsonResponse({"error": "Time slot is unavailable"}, status=400)
 
-    if user_role == "ATHLETE" and event_type != "PERSONAL":
+    if user_role == "ATHLETE":
+        if not check_events_overlap(user_id, start_time, end_time):
+            return JsonResponse({"error": "Time slot is unavailable"}, status=400)
+
         insert_response = supabase.table("events").insert({
             "athlete_id": user_id,
             "title": title,
@@ -81,12 +84,23 @@ def create_event(request):
             "end_time": end_time,
             "event_type": event_type,
             "status": "APPROVED",
-            "visibility": "BLOCKED"
+            "visibility": "BLOCKED" if event_type == "PERSONAL" else "FULL"
         }).execute()
 
-    if user_role == "COACHING_STAFF" or user_role == "HEAD_COACH":
+    elif user_role in ["COACHING_STAFF", "HEAD_COACH"]:
+        athlete_id = data.get("athlete_id")
+        if not athlete_id:
+            return JsonResponse({"error": "athlete_id is required"}, status=400)
+
+        link = supabase.table("staff_athletes").select("id").eq("staff_id", user_id).eq("athlete_id", athlete_id).execute()
+        if not link.data:
+            return JsonResponse({"error": "Not linked to this athlete"}, status=403)
+
+        if not check_events_overlap(athlete_id, start_time, end_time):
+            return JsonResponse({"error": "Time slot is unavailable for this athlete"}, status=400)
+
         insert_response = supabase.table("events").insert({
-            "athlete_id": user_id,
+            "athlete_id": athlete_id,
             "title": title,
             "start_time": start_time,
             "end_time": end_time,
@@ -94,6 +108,9 @@ def create_event(request):
             "status": "PENDING",
             "visibility": "FULL"
         }).execute()
+
+    else:
+        return JsonResponse({"error": "Invalid role"}, status=400)
 
     if not insert_response.data:
         return JsonResponse({"error": "Failed to save event"}, status=400)
@@ -310,3 +327,45 @@ def get_weekly_summary(request):
             "average_mental_score": round(avg_mental, 2)
         }
     })
+
+
+@csrf_exempt
+def log_activity(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
+
+    if role != "ATHLETE":
+        return JsonResponse({"error": "Only athletes can log activities"}, status=403)
+
+    data = json.loads(request.body)
+    date = data.get("date")
+    load = data.get("load")
+    fatigue = data.get("fatigue")
+    mental_score = data.get("mental_score")
+
+    if not date or load is None or fatigue is None or mental_score is None:
+        return JsonResponse({"error": "All fields are required"}, status=400)
+
+    response = supabase.table("activity_logs").insert({
+        "athlete_id": user.id,
+        "date": date,
+        "load": load,
+        "fatigue": fatigue,
+        "mental_score": mental_score
+    }).execute()
+
+    if not response.data:
+        return JsonResponse({"error": "Failed to log activity"}, status=400)
+
+    return JsonResponse({"status": "success"})

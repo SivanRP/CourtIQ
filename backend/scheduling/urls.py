@@ -11,4 +11,5 @@ urlpatterns = [
     path("get_rejected_events/", logic.get_rejected_events),
     path("statistics/", logic.get_statistics),
     path("weekly_summary/", logic.get_weekly_summary),
+    path("log_activity/", logic.log_activity),
 ]
