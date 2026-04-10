@@ -70,3 +70,74 @@ model StaffAthlete {
 
   @@unique([staffId, athleteId])
 }
+
+enum EventType {
+  PERSONAL
+  PRACTICE
+  MATCH
+  GYM
+  REST
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Visibility {
+  FULL
+  BLOCKED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Event {
+  id         String      @id @default(uuid())
+  athleteId  String
+  title      String
+  startTime  DateTime
+  endTime    DateTime
+  eventType  EventType
+  status     EventStatus @default(PENDING)
+  visibility Visibility  @default(FULL)
+  createdAt  DateTime    @default(now())
+}
+
+model SessionRequest {
+  id          String        @id @default(uuid())
+  requesterId String
+  athleteId   String
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  athleteId   String
+  date        DateTime
+  load        Float
+  fatigue     Float
+  mentalScore Float
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model MatchStatistics {
+  id         String   @id @default(uuid())
+  athleteId  String
+  matchDate  DateTime
+  opponent   String?
+  wins       Int      @default(0)
+  losses     Int      @default(0)
+  pointsWon  Int      @default(0)
+  pointsLost Int      @default(0)
+  createdAt  DateTime @default(now())
+}

@@ -46,7 +46,7 @@ def password_for_signup_is_valid(password):
             lower_present = True
         elif char.isdigit():
             digit_present = True
-        elif char in ".;:,-!?":
+        elif char in ".;:,-!?@#$%^&*()_+=":
             special_char_present = True
 
     if upper_present and lower_present and digit_present and special_char_present:
@@ -276,8 +276,8 @@ def link_users(request):
 
 #Unlink Athlete Logic:
 # - Validates the token and the user
-# - Checks if the field with the athlete is filled
-# - If all validations are passed, deletes the athlete-staff pair from the "staff_athletes" table
+# - Checks role to determine which side of the relationship to remove
+# - Staff provide athlete_id, athletes provide staff_id
 @csrf_exempt
 def unlink_athlete(request):
     if request.method != "POST":
@@ -291,14 +291,24 @@ def unlink_athlete(request):
     if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    staff_id = user.id
-
     data = json.loads(request.body)
-    athlete_id = data.get("athlete_id")
-    if not athlete_id:
-        return JsonResponse({"error": "athlete_id is required"}, status=400)
+    profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
+    role = profile.data[0]["role"]
 
-    supabase.table("staff_athletes").delete().eq("staff_id", staff_id).eq("athlete_id", athlete_id).execute()
+    if role in ["HEAD_COACH", "COACHING_STAFF"]:
+        athlete_id = data.get("athlete_id")
+        if not athlete_id:
+            return JsonResponse({"error": "athlete_id is required"}, status=400)
+        supabase.table("staff_athletes").delete().eq("staff_id", user.id).eq("athlete_id", athlete_id).execute()
+
+    elif role == "ATHLETE":
+        staff_id = data.get("staff_id")
+        if not staff_id:
+            return JsonResponse({"error": "staff_id is required"}, status=400)
+        supabase.table("staff_athletes").delete().eq("staff_id", staff_id).eq("athlete_id", user.id).execute()
+
+    else:
+        return JsonResponse({"error": "Invalid role"}, status=400)
 
     return JsonResponse({"status": "success"})
 
@@ -359,12 +369,42 @@ def reset_password(request):
     if not email:
         return JsonResponse({"error": "Email required"}, status=400)
 
-    response = supabase.auth.reset_password_email(email)
+    try:
+        supabase.auth.reset_password_email(email)
+    except AuthApiError as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
-    if response.get("error"):
-        return JsonResponse({"error": response["error"].message}, status=400)
-    else:
-        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "success"})
+
+#Update Password Logic:
+# - Validates the recovery token sent from the reset email
+# - Validates the new password meets requirements
+# - Updates the user's password in Supabase Auth
+@csrf_exempt
+def update_password(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    data = json.loads(request.body)
+    token = data.get("token")
+    new_password = data.get("new_password")
+
+    if not token or not new_password:
+        return JsonResponse({"error": "All fields are required"}, status=400)
+
+    if not password_for_signup_is_valid(new_password):
+        return JsonResponse({"error": "Password does not meet requirements"}, status=400)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Invalid or expired token"}, status=401)
+
+    try:
+        supabase.auth.update_user({"password": new_password})
+    except AuthApiError as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"status": "success"})
 
 
 

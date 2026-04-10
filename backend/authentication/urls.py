@@ -10,4 +10,6 @@ urlpatterns = [
     path("link/", logic.link_users),
     path("unlink/", logic.unlink_athlete),
     path("linked/", logic.get_linked),
+    path("reset_password/", logic.reset_password),
+    path("update_password/", logic.update_password),
 ]
