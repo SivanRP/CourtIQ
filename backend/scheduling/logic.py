@@ -28,7 +28,7 @@ def check_events_overlap(user_id, start_time, end_time):
     new_start = datetime.fromisoformat(start_time)
     new_end = datetime.fromisoformat(end_time)
 
-    existing_events = supabase.table("events").select("start_time,end_time").eq("athlete_id", user_id).in_("status", ["APPROVED", "PENDING"]).execute()
+    existing_events = supabase.table("events").select("start_time,end_time").eq("athlete_id", user_id).in_("status", ["CONFIRMED", "PENDING"]).execute()
 
     for event in existing_events.data:
         existing_start = datetime.fromisoformat(event['start_time'])
@@ -83,7 +83,7 @@ def create_event(request):
             "start_time": start_time,
             "end_time": end_time,
             "event_type": event_type,
-            "status": "APPROVED",
+            "status": "CONFIRMED",
             "visibility": "BLOCKED" if event_type == "PERSONAL" else "FULL"
         }).execute()
 
@@ -145,12 +145,12 @@ def approve_reject_event_request(request):
         return JsonResponse({"error": "Missing information"}, status=400)
 
     if reject_approve == "REJECT":
-        response = supabase.table("events").update({"status": "REJECTED"}).eq("id", event_id).execute()
+        supabase.table("events").delete().eq("id", event_id).execute()
 
         return JsonResponse({"status": "success", "action": "REJECT", "event_id": event_id})
 
     if reject_approve == "APPROVE":
-        response = supabase.table("events").update({"status": "APPROVED"}).eq("id", event_id).execute()
+        response = supabase.table("events").update({"status": "CONFIRMED"}).eq("id", event_id).execute()
 
         return JsonResponse({"status": "success", "action": "APPROVE", "event_id": event_id})
 
@@ -183,12 +183,12 @@ def get_weekly_schedule(request):
             return JsonResponse({"error": "Missing information"}, status=400)
 
         athlete_id = user_id
-        response = supabase.table("events").select("*").eq("athlete_id", athlete_id).in_("status", ["APPROVED", "PENDING"]).gte("end_time", start_of_week).lt("start_time", end_of_week).execute()
+        response = supabase.table("events").select("*").eq("athlete_id", athlete_id).in_("status", ["CONFIRMED", "PENDING"]).gte("end_time", start_of_week).lt("start_time", end_of_week).execute()
     elif (user_role == "HEAD_COACH" or user_role == "COACHING_STAFF"):
         if not athlete_id or not end_of_week or not start_of_week:
             return JsonResponse({"error": "Missing information"}, status=400)
 
-        response = supabase.table("events").select("*").eq("athlete_id", athlete_id).in_("status",["APPROVED", "PENDING"]).gte("end_time", start_of_week).lt("start_time", end_of_week).execute()
+        response = supabase.table("events").select("*").eq("athlete_id", athlete_id).in_("status",["CONFIRMED", "PENDING"]).gte("end_time", start_of_week).lt("start_time", end_of_week).execute()
 
     events = response.data
 
@@ -215,13 +215,7 @@ def get_rejected_events(request):
     data = json.loads(request.body)
     athlete_id = data.get("athlete_id") #field only for HEAD_COACH or COACHING_STAFF
 
-    response = supabase.table("events").select("*").eq("athlete_id", athlete_id).eq("status", "REJECTED").execute()
-    events = response.data
-
-    if not response.data:
-        return JsonResponse({"events": []})
-
-    return JsonResponse({"events": events})
+    return JsonResponse({"events": []})
 
 
 @csrf_exempt

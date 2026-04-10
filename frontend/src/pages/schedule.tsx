@@ -53,6 +53,8 @@ export default function SchedulePage() {
         startTime: "09:00",
         endTime: "10:00",
         eventType: "TRAINING",
+        repeat: false,
+        repeatWeeks: "4",
     });
     const [logForm, setLogForm] = useState({
         date: format(new Date(), "yyyy-MM-dd"),
@@ -170,27 +172,42 @@ export default function SchedulePage() {
         }
         setSubmitting(true);
         setFormError("");
-        const body: Record<string, string> = {
-            title: form.title,
-            start_time: `${form.date}T${form.startTime}:00`,
-            end_time: `${form.date}T${form.endTime}:00`,
-            event_type: form.eventType,
-        };
-        if (isStaff) body.athlete_id = selectedAthleteId;
 
-        const res = await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/create_event/",
-            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
-            router
-        );
+        const weeks = form.repeat ? Math.max(1, parseInt(form.repeatWeeks) || 1) : 1;
+        const baseDate = new Date(form.date + "T00:00:00");
+        let failed = false;
+
+        for (let i = 0; i < weeks; i++) {
+            const eventDate = format(
+                new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000),
+                "yyyy-MM-dd"
+            );
+            const body: Record<string, string> = {
+                title: form.title,
+                start_time: `${eventDate}T${form.startTime}:00`,
+                end_time: `${eventDate}T${form.endTime}:00`,
+                event_type: form.eventType,
+            };
+            if (isStaff) body.athlete_id = selectedAthleteId;
+
+            const res = await getAuth(
+                "http://127.0.0.1:8000/api/scheduling/create_event/",
+                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+                router
+            );
+            if (!res?.ok) {
+                const data = await res?.json();
+                setFormError(data?.error || `Failed on week ${i + 1}.`);
+                failed = true;
+                break;
+            }
+        }
+
         setSubmitting(false);
-        if (res?.ok) {
+        if (!failed) {
             setShowEventModal(false);
-            setForm({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", endTime: "10:00", eventType: "TRAINING" });
+            setForm({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", endTime: "10:00", eventType: "TRAINING", repeat: false, repeatWeeks: "4" });
             fetchEvents();
-        } else {
-            const data = await res?.json();
-            setFormError(data?.error || "Failed to create event.");
         }
     };
 
@@ -405,6 +422,32 @@ export default function SchedulePage() {
                                     ))}
                                 </select>
                             </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="repeat"
+                                    checked={form.repeat}
+                                    onChange={(e) => setForm({ ...form, repeat: e.target.checked })}
+                                    className="w-4 h-4 accent-[#c8a84b] cursor-pointer"
+                                />
+                                <label htmlFor="repeat" className="text-[#9cbcd9] text-sm cursor-pointer">
+                                    Repeat weekly
+                                </label>
+                                {form.repeat && (
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        <span className="text-[#9cbcd9] text-sm">for</span>
+                                        <input
+                                            type="number"
+                                            min="2"
+                                            max="52"
+                                            value={form.repeatWeeks}
+                                            onChange={(e) => setForm({ ...form, repeatWeeks: e.target.value })}
+                                            className="w-16 bg-[#121914] border border-[#c8a84b33] rounded-lg px-2 py-1 text-white text-sm text-center focus:outline-none focus:border-[#9cbcd9]"
+                                        />
+                                        <span className="text-[#9cbcd9] text-sm">weeks</span>
+                                    </div>
+                                )}
+                            </div>
                             {isStaff && (
                                 <p className="text-[#9cbcd9] text-xs bg-[#121914] rounded-lg px-3 py-2 border border-[#c8a84b33]">
                                     This will appear as pending on the athlete's schedule until they approve it.
@@ -418,7 +461,13 @@ export default function SchedulePage() {
                                 </button>
                                 <button onClick={handleCreateEvent} disabled={submitting}
                                     className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
-                                    {submitting ? "Submitting..." : isStaff ? "Send Request" : "Create"}
+                                    {submitting
+                                        ? "Creating..."
+                                        : isStaff
+                                        ? "Send Request"
+                                        : form.repeat
+                                        ? `Create ${form.repeatWeeks} Events`
+                                        : "Create"}
                                 </button>
                             </div>
                         </div>
