@@ -30,8 +30,8 @@ type AthleteProfile = {
 const EVENT_COLORS: Record<string, string> = {
     TRAINING: "bg-[#9cbcd9] text-[#121914]",
     MATCH: "bg-[#d5d131] text-[#121914]",
-    PERSONAL: "bg-[#4a7c59] text-white",
-    CONDITIONING: "bg-[#7b5ea7] text-white",
+    PERSONAL: "bg-[#5f9a70] text-[#121914]",
+    CONDITIONING: "bg-[#9273c2] text-[#121914]",
 };
 
 const ATHLETE_EVENT_TYPES = ["TRAINING", "MATCH", "PERSONAL", "CONDITIONING"];
@@ -79,6 +79,8 @@ export default function SchedulePage() {
         eventType: "TRAINING",
     });
     const [eventToDelete, setEventToDelete] = useState<BackendEvent | null>(null);
+    const [eventToReject, setEventToReject] = useState<BackendEvent | null>(null);
+    const activeEvent = eventToDelete || eventToReject;
     const [isMatch, setIsMatch] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
@@ -405,7 +407,7 @@ export default function SchedulePage() {
                                         className="px-3 py-1 bg-[#d5d131] text-[#121914] text-xs font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                                         Approve
                                     </button>
-                                    <button onClick={() => handleApproveReject(event.id, "REJECT")}
+                                    <button onClick={() => setEventToReject(event)}
                                         className="px-3 py-1 bg-red-400 text-[#121914] text-xs font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                                         Reject
                                     </button>
@@ -713,30 +715,41 @@ export default function SchedulePage() {
                 </div>
             )}
 
-            {/* Delete Confirmation Modal */}
-            {eventToDelete && (
+            {/* Delete/Reject Confirmation Modal */}
+            {(activeEvent) && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 w-full max-w-md">
                         <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
-                            Confirm Deletion
+                            {eventToDelete ? "Confirm Deletion" : "Confirm Rejection"}
                         </h2>
                         <p className="text-white mb-6">
-                            Are you sure you want to delete{" "}
-                            <span className="text-[#d5d131] font-semibold">{eventToDelete.title}</span>
+                            Are you sure you want to {eventToDelete ? "delete" : "reject"}{" "}
+                            <span className="text-[#d5d131] font-semibold">{activeEvent.title}</span>
                             {" on "}
-                            <span className="text-[#d5d131] font-semibold">{new Date(eventToDelete.start_time).toLocaleDateString()}</span>
+                            <span className="text-[#d5d131] font-semibold">{new Date(activeEvent.start_time).toLocaleDateString()}</span>
                             {" ?"}
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
-                                onClick={() => setEventToDelete(null)}
+                                onClick={() => {
+                                    setEventToDelete(null);
+                                    setEventToReject(null);
+                                }}
                                 className="px-4 py-2 text-gray-400 hover:text-white">
                                 Cancel
                             </button>
                             <button
-                                onClick={async () => {await handleDeleteEvent(eventToDelete.id); setEventToDelete(null);}}
+                                onClick={async () => {
+                                    if (eventToDelete) {
+                                        await handleDeleteEvent(eventToDelete.id);
+                                        setEventToDelete(null);
+                                    } else if (eventToReject) {
+                                        await handleApproveReject(eventToReject.id, "REJECT");
+                                        setEventToReject(null);
+                                    }
+                                }}
                                 className="px-4 py-2 bg-red-400 text-[#121914] rounded font-bold cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
-                                Delete
+                                {eventToDelete ? "Delete" : "Reject"}
                             </button>
                         </div>
                     </div>
