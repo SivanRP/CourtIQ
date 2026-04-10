@@ -196,9 +196,7 @@ const handleForgotPassword = async () => {
         {showForgotPassword && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
             <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
-              <h2 className="text-white text-lg mb-4">
-                Reset Password
-              </h2>
+              <h2 className={`${yesevaOne.className} text-white text-lg mb-4`}>Reset Password</h2>
               <input
                 placeholder="Enter your email"
                 onChange={(e) => setForm(prev => ({...prev, email: e.target.value}))}
@@ -212,7 +210,7 @@ const handleForgotPassword = async () => {
               </button>
               <button
                 onClick={() => setShowForgotPassword(false)}
-                className = "text-sm text-white mt-3">
+                className = "text-sm text-gray-400 hover:text-white mt-3">
                 Cancel
               </button>
             </div>
@@ -240,7 +238,7 @@ const handleForgotPassword = async () => {
 
         <button 
           onClick={handleSubmit}
-          className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest cursor-pointer mt-2 transition-transform hover:scale-103 active:scale-100 active:brightness-75">
+          className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest mt-2 cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
           {isSignUp ? "SIGN UP" : "LOG IN"}
         </button>
 

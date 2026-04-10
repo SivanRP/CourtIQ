@@ -97,7 +97,7 @@ def create_event(request):
             return JsonResponse({"error": "Time slot is unavailable for this athlete"}, status=400)
 
         # Head coaches add events directly (confirmed); coaching staff submit requests (pending)
-        status = "CONFIRMED" if user_role == "HEAD_COACH" else "PENDING"
+        status = "CONFIRMED" if (user_role == "HEAD_COACH" and event_type == "MATCH") else "PENDING"
 
         insert_response = supabase.table("events").insert({
             "athlete_id": athlete_id,

@@ -6,7 +6,6 @@ import { getAuth } from "@/utils/getAuth";
 import Navbar from "@/components/Navbar";
 import { startOfWeek, addDays, addWeeks, subWeeks, format } from "date-fns";
 
-
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700"] });
 const yesevaOne = Yeseva_One({ subsets: ["latin"], weight: ["400"] });
 
@@ -30,13 +29,13 @@ type AthleteProfile = {
 
 const EVENT_COLORS: Record<string, string> = {
     TRAINING: "bg-[#9cbcd9] text-[#121914]",
-    MATCH: "bg-[#c8a84b] text-[#121914]",
-    PERSONAL: "bg-[#4a7c59] text-white",
-    CONDITIONING: "bg-[#7b5ea7] text-white",
+    MATCH: "bg-[#d5d131] text-[#121914]",
+    PERSONAL: "bg-[#5f9a70] text-[#121914]",
+    CONDITIONING: "bg-[#9273c2] text-[#121914]",
 };
 
 const ATHLETE_EVENT_TYPES = ["TRAINING", "MATCH", "PERSONAL", "CONDITIONING"];
-const STAFF_EVENT_TYPES = ["TRAINING", "MATCH", "CONDITIONING"];
+const REQUEST_SESSION_TYPES = ["TRAINING", "CONDITIONING"];
 
 export default function SchedulePage() {
     const router = useRouter();
@@ -49,6 +48,7 @@ export default function SchedulePage() {
     );
     const [showEventModal, setShowEventModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(false);
     const [form, setForm] = useState({
         title: "",
         date: format(new Date(), "yyyy-MM-dd"),
@@ -65,6 +65,9 @@ export default function SchedulePage() {
         mentalScore: "7",
     });
     const [userId, setUserId] = useState<string>("");
+    const isAthlete = role === "ATHLETE";
+    const isStaff = role === "COACHING_STAFF" || role === "HEAD_COACH";
+    const isHeadCoach = role === "HEAD_COACH";
     const [selectedEvent, setSelectedEvent] = useState<BackendEvent | null>(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingEventId, setEditingEventId] = useState<string>("");
@@ -75,6 +78,10 @@ export default function SchedulePage() {
         endTime: "",
         eventType: "TRAINING",
     });
+    const [eventToDelete, setEventToDelete] = useState<BackendEvent | null>(null);
+    const [eventToReject, setEventToReject] = useState<BackendEvent | null>(null);
+    const activeEvent = eventToDelete || eventToReject;
+    const [isMatch, setIsMatch] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [logError, setLogError] = useState("");
@@ -92,8 +99,6 @@ export default function SchedulePage() {
         const h = hour % 12 === 0 ? 12 : hour % 12;
         return `${h} ${period}`;
     };
-
-    const isStaff = role === "COACHING_STAFF" || role === "HEAD_COACH";
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -159,8 +164,9 @@ export default function SchedulePage() {
         }
         const pending = event.status === "PENDING";
         const label = pending ? `${event.title} (Pending)` : event.title;
+        if (pending) {return {label, colorClass: "bg-gray-400 text-[#1a261e]"};}
         const base = EVENT_COLORS[event.event_type] ?? "bg-[#1a261e] text-white";
-        return { label, colorClass: pending ? `${base} opacity-60` : base };
+        return { label, colorClass: base };
     };
 
     const handleApproveReject = async (eventId: string, action: "APPROVE" | "REJECT") => {
@@ -330,26 +336,14 @@ export default function SchedulePage() {
 
     return (
         <div className={`${lato.className} min-h-screen bg-[#121914]`}>
-            <nav className="w-full flex items-center justify-between px-8 pt-2 pb-1 bg-[#1a261e] border-b border-[#c8a84b33]">
-                <Image src="/CourtIQlogo.png" alt="CourtIQ Logo" width={187.5} height={75} priority />
-                <div className="flex items-center gap-6">
-                    <button onClick={() => router.push("/dashboard")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">Dashboard</button>
-                    <button onClick={() => router.push("/schedule")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer px-5 h-18 bg-[#121914] border-b border-[#c8a84b33] border-2">Schedule</button>
-                    <button onClick={() => router.push("/profile")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">Profile</button>
-                    <button onClick={() => { localStorage.removeItem("token"); router.push("/"); }}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">Log Out</button>
-                </div>
-            </nav>
+            <Navbar/>
 
             <div className="px-8 py-6 flex items-center justify-between border-b border-[#c8a84b33]">
                 <h1 className={`${yesevaOne.className} text-white text-3xl`}>Weekly Schedule</h1>
                 <div className="flex items-center gap-3">
                     {isStaff && linkedAthletes.length > 0 && (
                         <select value={selectedAthleteId} onChange={(e) => setSelectedAthleteId(e.target.value)}
-                            className="bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9] cursor-pointer">
+                            className="bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm">
                             {linkedAthletes.map((a) => (
                                 <option key={a.id} value={a.id}>{a.first_name} {a.last_name} (@{a.username})</option>
                             ))}
@@ -358,16 +352,32 @@ export default function SchedulePage() {
                     {isStaff && linkedAthletes.length === 0 && (
                         <span className="text-gray-400 text-sm">No linked athletes</span>
                     )}
-                    {!isStaff && (
+                    {/* ATHLETE */}
+                    {isAthlete && (
+                        <>
                         <button onClick={() => setShowLogModal(true)}
-                            className="px-4 py-2 bg-[#1a261e] text-[#9cbcd9] font-semibold rounded-lg border border-[#c8a84b33] hover:border-[#9cbcd9] transition cursor-pointer text-sm">
+                            className="px-4 py-2 bg-[#1a261e] text-[#9cbcd9] text-sm font-semibold rounded-lg border border-[#c8a84b33] cursor-pointer transition-transform hover:border-[#9cbcd9] hover:scale-103 active:scale-100 active:brightness-75">
                             + Log Activity
                         </button>
-                    )}
-                    {(!isStaff || selectedAthleteId) && (
                         <button onClick={() => setShowEventModal(true)}
-                            className="px-4 py-2 bg-[#c8a84b] text-[#121914] font-bold rounded-lg hover:brightness-110 transition cursor-pointer">
-                            {role === "HEAD_COACH" ? "+ Add Event" : role === "COACHING_STAFF" ? "+ Request Session" : "+ New Event"}
+                            className="px-4 py-2 bg-[#d5d131] text-[#121914] font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
+                            + New Event
+                        </button>
+                        </>
+                    )}
+                    {/* COACHING STAFF & HEAD COACH */}
+                    {(isStaff && selectedAthleteId) && (
+                        <button onClick={() => {setIsMatch(false); setShowEventModal(true);}}
+                            className="px-4 py-2 bg-[#1a261e] text-[#9cbcd9] text-sm font-semibold rounded-lg border border-[#c8a84b33] cursor-pointer transition-transform hover:border-[#9cbcd9] hover:scale-103 active:scale-100 active:brightness-75">
+                            + Request Session
+                        </button>
+                    )}
+                    {/* HEAD COACH */}
+                    {(isHeadCoach && selectedAthleteId) && (
+                        <button onClick={() => 
+                            {setIsMatch(true); setForm(prev => ({ ...prev, eventType: "MATCH" })); setShowEventModal(true);}}
+                            className="px-4 py-2 bg-[#d5d131] text-[#121914] font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
+                            + Add Match
                         </button>
                     )}
                 </div>
@@ -376,7 +386,7 @@ export default function SchedulePage() {
             {/* Pending requests banner for athletes */}
             {!isStaff && pendingEvents.length > 0 && (
                 <div className="px-8 py-4 bg-[#1a261e] border-b border-[#c8a84b33]">
-                    <h3 className="text-[#c8a84b] font-semibold text-sm mb-3">
+                    <h3 className="text-[#d5d131] font-semibold text-sm mb-3">
                         Pending Session Requests ({pendingEvents.length})
                     </h3>
                     <div className="flex flex-col gap-2">
@@ -394,11 +404,11 @@ export default function SchedulePage() {
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => handleApproveReject(event.id, "APPROVE")}
-                                        className="px-3 py-1 bg-[#4a7c59] text-white text-xs font-bold rounded-lg hover:brightness-110 cursor-pointer transition">
+                                        className="px-3 py-1 bg-[#d5d131] text-[#121914] text-xs font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                                         Approve
                                     </button>
-                                    <button onClick={() => handleApproveReject(event.id, "REJECT")}
-                                        className="px-3 py-1 bg-[#7c4a4a] text-white text-xs font-bold rounded-lg hover:brightness-110 cursor-pointer transition">
+                                    <button onClick={() => setEventToReject(event)}
+                                        className="px-3 py-1 bg-red-400 text-[#121914] text-xs font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                                         Reject
                                     </button>
                                 </div>
@@ -408,9 +418,15 @@ export default function SchedulePage() {
                 </div>
             )}
 
+            {/* Current Week */}
             <div className="flex items-center bg-[#1a261e] px-8 py-3 text-[#9cbcd9] border-b border-[#c8a84b33]">
                 <div className="flex items-center gap-4">
                     <div className="flex gap-1">
+                        <button
+                            onClick={() => setShowSidebar((prev) => !prev)}
+                            className="text-white text-xl mr-5 hover:text-[#9cbcd9] transition cursor-pointer"> 
+                            {"\u2630"}
+                        </button>
                         <button onClick={() => setCurrentWeekStart((p) => subWeeks(p, 1))}
                             className="px-3 hover:text-white text-lg font-bold cursor-pointer">&lt;</button>
                         <button onClick={() => setCurrentWeekStart((p) => addWeeks(p, 1))}
@@ -421,45 +437,124 @@ export default function SchedulePage() {
                     </span>
                 </div>
                 <button onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))}
-                    className="ml-auto px-4 py-1 rounded-lg bg-[#9cbcd9] text-[#121914] font-semibold hover:brightness-110 cursor-pointer transition">
+                    className="ml-auto px-4 py-1 rounded-lg bg-[#9cbcd9] text-[#121914] font-semibold cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                     Today
                 </button>
             </div>
 
-            <div className="overflow-x-auto px-8 py-4">
-                <div className="grid grid-cols-[80px_repeat(7,1fr)] min-w-[700px]">
-                    <div className="border-r border-b border-[#c8a84b33] p-2" />
-                    {week.map((day, i) => (
-                        <div key={i} className="text-center border-r border-b border-[#c8a84b33] p-2">
-                            <div className="text-sm font-bold text-white">{day.label}</div>
-                            <div className="text-xs text-gray-400">{day.dateLabel}</div>
-                        </div>
-                    ))}
-                    {hours.map((hour) => (
-                        <>
-                            <div key={`label-${hour}`}
-                                className="text-xs text-gray-400 border-r border-b border-[#c8a84b33] p-2 min-h-[56px] flex items-start justify-end pr-3 pt-2">
-                                {formatHour(hour)}
-                            </div>
-                            {week.map((_, dayIndex) => (
-                                <div key={`${dayIndex}-${hour}`}
-                                    className="border-r border-b border-[#c8a84b33] p-1 min-h-[56px] bg-[#121914]">
-                                    {getEventsForCell(dayIndex, hour).map((event) => {
-                                        const { label, colorClass } = getEventDisplay(event);
-                                        const clickable = !(isStaff && event.visibility === "BLOCKED");
-                                        return (
-                                            <div key={event.id}
-                                                onClick={() => clickable && setSelectedEvent(event)}
-                                                className={`text-xs font-semibold px-2 py-1 rounded mb-1 truncate ${colorClass} ${clickable ? "cursor-pointer hover:brightness-110" : ""}`}
-                                                title={label}>
-                                                {label}
-                                            </div>
-                                        );
-                                    })}
+            <div className="flex">
+                
+                {/* Side Panel */}
+                {showSidebar && (
+                    <div className="w-48 bg-[#1a261e] border-r border-[#c8a84b33] shadow-lg p-6">
+                        <h2 className={`${yesevaOne.className} flex items-center justify-between mb-6 text-white text-lg`}>Legend</h2>
+                        {/* Color Legend */}
+                        <div className="flex flex-col gap-4">
+                            {Object.entries(EVENT_COLORS).map(([type, styles]) => (
+                                <div key={type} className="flex items-center gap-3">
+                                    <div className={`w-4 h-4 rounded ${styles}`} />
+                                    <span className="text-white text-sm">
+                                        {type.charAt(0) + type.slice(1).toLowerCase()}
+                                    </span>
                                 </div>
                             ))}
-                        </>
-                    ))}
+                            <div className="flex items-center gap-3 mt-4">
+                                <div className="w-4 h-4 rounded bg-gray-400 opacity-60" />
+                                <span className="text-gray-300 text-sm">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Schedule Grid */}
+                <div className="flex-1 overflow-x-auto px-8 py-4">
+                    <div className="grid grid-cols-[80px_repeat(7,1fr)] min-w-[700px]">
+                        <div className="border-r border-b border-[#c8a84b33] p-2" />
+                            {/* Days Labels */}
+                            {week.map((day, i) => (
+                                <div key={i} className="text-center border-r border-b border-[#c8a84b33] p-2">
+                                    <div className="text-sm font-bold text-white">{day.label}</div>
+                                    <div className="text-xs text-gray-400">{day.dateLabel}</div>
+                                </div>
+                            ))}
+                            {/* Time Labels */}
+                            <div className="flex flex-col">
+                                {hours.map((hour) => (
+                                    <div key={hour}
+                                        className="text-xs text-gray-400 border-r border-b border-[#c8a84b33] h-[56px] flex items-start justify-end pr-3 pt-2">
+                                        {formatHour(hour)}
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Cells */}
+                            {week.map((day, dayIndex) => (
+                                <div key={dayIndex}
+                                    className="relative border-r border-b border-[#c8a84b33] bg-[#121914]"
+                                    style={{ height: `${hours.length * 56}px` }}>
+                                    {hours.map((_, i) => (
+                                        <div key={i}
+                                            className="border-b border-[#c8a84b33]"
+                                            style={{ height: "56px" }}/>
+                                    ))}
+
+                                    {/* Events */}
+                                    {events
+                                        .filter((e) => {
+                                            const start = new Date(e.start_time);
+                                            return format(start, "yyyy-MM-dd") === format(day.fullDate, "yyyy-MM-dd");
+                                        })
+                                        .map((event) => {
+                                            const start = new Date(event.start_time);
+                                            const end = new Date(event.end_time);
+                                            const startHour = start.getHours() + start.getMinutes() / 60;
+                                            const endHour = end.getHours() + end.getMinutes() / 60;
+                                            const top = (startHour - 5) * 56;
+                                            const minHeight = 28;
+                                            const rawHeight = (endHour - startHour) * 56;
+                                            const height = Math.max(minHeight, rawHeight);
+                                            const { label, colorClass } = getEventDisplay(event);
+                                            const clickable = !(isStaff && event.visibility === "BLOCKED");
+                                            return (
+                                                <div
+                                                    key={event.id}
+                                                    onClick={() => clickable && setSelectedEvent(event)}
+                                                    className={`absolute left-1 right-1 rounded px-2 py-1 text-xs font-semibold ${colorClass} ${clickable ? "cursor-pointer hover:brightness-110" : ""}`}
+                                                    style={{top: `${top}px`, height: `${height}px`}}>
+                                                    <div className="w-full h-full leading-tight overflow-hidden">
+                                                        {label}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                            </div>
+                        ))}
+                        
+                        {/* {hours.map((hour) => (
+                            <>
+                                <div key={`label-${hour}`}
+                                    className="text-xs text-gray-400 border-r border-b border-[#c8a84b33] p-2 min-h-[56px] flex items-start justify-end pr-3 pt-2">
+                                    {formatHour(hour)}
+                                </div>
+                                {week.map((_, dayIndex) => (
+                                    <div key={`${dayIndex}-${hour}`}
+                                        className="relative border-r border-b border-[#c8a84b33] p-1 min-h-[56px] bg-[#121914]">
+                                        {getEventsForCell(dayIndex, hour).map((event) => {
+                                            const { label, colorClass } = getEventDisplay(event);
+                                            const clickable = !(isStaff && event.visibility === "BLOCKED");
+                                            return (
+                                                <div key={event.id}
+                                                    onClick={() => clickable && setSelectedEvent(event)}
+                                                    className={`text-xs font-semibold px-2 py-1 rounded mb-1 truncate ${colorClass} ${clickable ? "cursor-pointer hover:brightness-110" : ""}`}
+                                                    title={label}>
+                                                    {label}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </>
+                        ))} */}
+                    </div>
                 </div>
             </div>
 
@@ -499,14 +594,18 @@ export default function SchedulePage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="text-[#9cbcd9] text-sm mb-1 block">Event Type</label>
+                                <label className="text-[#9cbcd9] text-sm mb-2 block">Event Type</label>
+                                {isMatch ? (
+                                    <div className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm">Match</div>
+                                ) : (          
                                 <select value={form.eventType}
                                     onChange={(e) => setForm({ ...form, eventType: e.target.value })}
                                     className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]">
-                                    {(isStaff ? STAFF_EVENT_TYPES : ATHLETE_EVENT_TYPES).map((t) => (
+                                    {(isStaff ? REQUEST_SESSION_TYPES : ATHLETE_EVENT_TYPES).map((t) => (
                                         <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
                                     ))}
                                 </select>
+                                )}
                             </div>
                             <div className="flex items-center gap-3">
                                 <input
@@ -514,7 +613,7 @@ export default function SchedulePage() {
                                     id="repeat"
                                     checked={form.repeat}
                                     onChange={(e) => setForm({ ...form, repeat: e.target.checked })}
-                                    className="w-4 h-4 accent-[#c8a84b] cursor-pointer"
+                                    className="w-4 h-4 accent-[#d5d131] cursor-pointer"
                                 />
                                 <label htmlFor="repeat" className="text-[#9cbcd9] text-sm cursor-pointer">
                                     Repeat weekly
@@ -534,12 +633,12 @@ export default function SchedulePage() {
                                     </div>
                                 )}
                             </div>
-                            {role === "COACHING_STAFF" && (
+                            {isStaff && !isMatch &&(
                                 <p className="text-[#9cbcd9] text-xs bg-[#121914] rounded-lg px-3 py-2 border border-[#c8a84b33]">
                                     This will appear as pending on the athlete's schedule until they approve it.
                                 </p>
                             )}
-                            {role === "HEAD_COACH" && (
+                            {isStaff && isMatch && (
                                 <p className="text-[#9cbcd9] text-xs bg-[#121914] rounded-lg px-3 py-2 border border-[#c8a84b33]">
                                     As head coach, this event will be added directly to the athlete's schedule.
                                 </p>
@@ -547,11 +646,11 @@ export default function SchedulePage() {
                             {formError && <p className="text-red-400 text-sm">{formError}</p>}
                             <div className="flex gap-3 mt-2">
                                 <button onClick={() => { setShowEventModal(false); setFormError(""); }}
-                                    className="flex-1 py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm hover:border-[#9cbcd9] transition cursor-pointer">
+                                    className="flex-1 py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm cursor-pointer transition-transform  hover:border-[#9cbcd9] hover:scale-103 active:scale-100 active:brightness-75">
                                     Cancel
                                 </button>
                                 <button onClick={handleCreateEvent} disabled={submitting}
-                                    className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
+                                    className="flex-1 py-2 rounded-lg bg-[#d5d131] text-[#121914] font-bold text-sm cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75 disabled:opacity-50">
                                     {submitting
                                         ? "Creating..."
                                         : role === "COACHING_STAFF"
@@ -589,20 +688,20 @@ export default function SchedulePage() {
                                 {new Date(selectedEvent.end_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                             </p>
                             {selectedEvent.status === "PENDING" && (
-                                <p className="text-[#c8a84b] text-xs font-semibold">Pending approval</p>
+                                <p className="text-[#d5d131] text-xs font-semibold">Pending approval</p>
                             )}
                         </div>
-                        {/* Athletes can edit/delete their own events; HEAD_COACH can edit/delete for linked athletes */}
-                        {(role === "ATHLETE" && selectedEvent.athlete_id === userId) || role === "HEAD_COACH" ? (
+                        {/* Athletes can edit/delete their own events; HEAD_COACH can edit/delete matches for linked athletes */}
+                        {(role === "ATHLETE" && selectedEvent.athlete_id === userId) || role === "HEAD_COACH" && selectedEvent.event_type === "MATCH" ? (
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => openEditModal(selectedEvent)}
-                                    className="flex-1 py-2 rounded-lg bg-[#9cbcd9] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer">
+                                    className="flex-1 py-2 rounded-lg bg-[#121914] text-white font-bold text-sm border border-[#c8a84b33] cursor-pointer transition-transform hover:border-[#9cbcd9] hover:scale-103 active:scale-100 active:brightness-75">
                                     Edit
                                 </button>
                                 <button
-                                    onClick={() => handleDeleteEvent(selectedEvent.id)}
-                                    className="flex-1 py-2 rounded-lg bg-[#7c4a4a] text-white font-bold text-sm hover:brightness-110 transition cursor-pointer">
+                                    onClick={() => setEventToDelete(selectedEvent)}
+                                    className="flex-1 py-2 rounded-lg bg-red-400 text-[#121914] font-bold text-sm cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                                     Delete
                                 </button>
                             </div>
@@ -612,6 +711,47 @@ export default function SchedulePage() {
                                 Close
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Delete/Reject Confirmation Modal */}
+            {(activeEvent) && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 w-full max-w-md">
+                        <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
+                            {eventToDelete ? "Confirm Deletion" : "Confirm Rejection"}
+                        </h2>
+                        <p className="text-white mb-6">
+                            Are you sure you want to {eventToDelete ? "delete" : "reject"}{" "}
+                            <span className="text-[#d5d131] font-semibold">{activeEvent.title}</span>
+                            {" on "}
+                            <span className="text-[#d5d131] font-semibold">{new Date(activeEvent.start_time).toLocaleDateString()}</span>
+                            {" ?"}
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setEventToDelete(null);
+                                    setEventToReject(null);
+                                }}
+                                className="px-4 py-2 text-gray-400 hover:text-white">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (eventToDelete) {
+                                        await handleDeleteEvent(eventToDelete.id);
+                                        setEventToDelete(null);
+                                    } else if (eventToReject) {
+                                        await handleApproveReject(eventToReject.id, "REJECT");
+                                        setEventToReject(null);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-400 text-[#121914] rounded font-bold cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
+                                {eventToDelete ? "Delete" : "Reject"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -653,7 +793,7 @@ export default function SchedulePage() {
                                 <select value={editForm.eventType}
                                     onChange={(e) => setEditForm({ ...editForm, eventType: e.target.value })}
                                     className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]">
-                                    {(role === "ATHLETE" ? ATHLETE_EVENT_TYPES : STAFF_EVENT_TYPES).map((t) => (
+                                    {(role === "ATHLETE" ? ATHLETE_EVENT_TYPES : REQUEST_SESSION_TYPES).map((t) => (
                                         <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
                                     ))}
                                 </select>
@@ -661,11 +801,11 @@ export default function SchedulePage() {
                             {editError && <p className="text-red-400 text-sm">{editError}</p>}
                             <div className="flex gap-3 mt-2">
                                 <button onClick={() => { setShowEditModal(false); setEditError(""); }}
-                                    className="flex-1 py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm hover:border-[#9cbcd9] transition cursor-pointer">
+                                    className="flex-1 py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm cursor-pointer transition-transform  hover:border-[#9cbcd9] hover:scale-103 active:scale-100 active:brightness-75">
                                     Cancel
                                 </button>
                                 <button onClick={handleEditEvent} disabled={submitting}
-                                    className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
+                                    className="flex-1 py-2 rounded-lg bg-[#d5d131] text-[#121914] font-bold text-sm cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75 disabled:opacity-50">
                                     {submitting ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
@@ -714,7 +854,7 @@ export default function SchedulePage() {
                                     Cancel
                                 </button>
                                 <button onClick={handleLogActivity} disabled={submitting}
-                                    className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
+                                    className="flex-1 py-2 rounded-lg bg-[#d5d131] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
                                     {submitting ? "Saving..." : "Save"}
                                 </button>
                             </div>

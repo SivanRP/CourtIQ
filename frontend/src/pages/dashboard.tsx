@@ -160,7 +160,7 @@ export default function Dashboard() {
             {
                 label: "Match Results",
                 data: [totalWins, totalLosses],
-                backgroundColor: ["#c8a84b", "#9cbcd9"],
+                backgroundColor: ["#d5d131", "#9cbcd9"],
             },
         ],
     };
@@ -178,7 +178,9 @@ export default function Dashboard() {
                         <h1 className={`${yesevaOne.className} text-white text-3xl`}>Dashboard</h1>
                         {isStaff && selectedAthlete && (
                             <p className="text-[#9cbcd9] text-sm mt-1">
-                                Viewing: {selectedAthlete.first_name} {selectedAthlete.last_name} (@{selectedAthlete.username})
+                                Viewing: {selectedAthlete.first_name} {selectedAthlete.last_name} (
+                                    <span className="text-[#d5d131]">@{selectedAthlete.username}</span>
+                                )
                             </p>
                         )}
                     </div>
@@ -199,11 +201,11 @@ export default function Dashboard() {
                             <span className="text-gray-400 text-sm">No linked athletes</span>
                         )}
                         <button onClick={() => setPeriod("week")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors cursor-pointer ${period === "week" ? "bg-[#9cbcd9] text-[#121914]" : "bg-[#1a261e] text-white border border-[#c8a84b33]"}`}>
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-transform transition-colors cursor-pointer ${period === "week" ? "bg-[#9cbcd9] text-[#121914] hover:brightness-110 hover:scale-103" : "bg-[#1a261e] text-white border border-[#c8a84b33] hover:border-[#9cbcd9] hover:scale-103"}`}>
                             Last 7 Days
                         </button>
                         <button onClick={() => setPeriod("month")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors cursor-pointer ${period === "month" ? "bg-[#9cbcd9] text-[#121914]" : "bg-[#1a261e] text-white border border-[#c8a84b33]"}`}>
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-transform transition-colors cursor-pointer ${period === "month" ? "bg-[#9cbcd9] text-[#121914] hover:brightness-110 hover:scale-103" : "bg-[#1a261e] text-white border border-[#c8a84b33] hover:border-[#9cbcd9] hover:scale-103"}`}>
                             Last 30 Days
                         </button>
                     </div>
@@ -231,7 +233,7 @@ export default function Dashboard() {
 
                         <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
                             <h2 className="text-white font-bold mb-1">Win Rate</h2>
-                            <p className="text-[#c8a84b] text-2xl font-bold mb-1">{winRate}%</p>
+                            <p className="text-[#d5d131] text-2xl font-bold mb-1">{winRate}%</p>
                             <p className="text-[#9cbcd9] text-xs mb-4">{totalWins}W – {totalLosses}L this period</p>
                             {totalWins + totalLosses > 0 ? (
                                 <Bar data={winRateData} options={chartOptions} />
