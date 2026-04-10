@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback } from "react";
 import { Lato, Yeseva_One } from "next/font/google";
+import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import {
     Chart as ChartJS,
@@ -15,6 +16,7 @@ import {
 } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { getAuth } from "../utils/getAuth";
+
 
 ChartJS.register(
     CategoryScale,
@@ -167,26 +169,8 @@ export default function Dashboard() {
 
     return (
         <div className={`${lato.className} min-h-screen bg-[#121914]`}>
-            <nav className="w-full flex items-center justify-between px-8 pt-2 pb-1 bg-[#1a261e] border-b border-[#c8a84b33]">
-                <Image src="/CourtIQlogo.png" alt="CourtIQ Logo" width={187.5} height={75} priority />
-                <div className="flex items-center gap-6">
-                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer px-5 h-18 bg-[#121914] border-b border-[#c8a84b33] border-2">
-                        Dashboard
-                    </button>
-                    <button onClick={() => router.push("/schedule")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Schedule
-                    </button>
-                    <button onClick={() => router.push("/profile")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Profile
-                    </button>
-                    <button onClick={() => { localStorage.removeItem("token"); router.push("/"); }}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Log Out
-                    </button>
-                </div>
-            </nav>
+        
+            <Navbar/>
 
             <div className="px-10 py-8">
                 <div className="flex items-center justify-between mb-6">

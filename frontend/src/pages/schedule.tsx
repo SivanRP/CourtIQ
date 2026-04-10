@@ -3,7 +3,9 @@ import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import { Lato, Yeseva_One } from "next/font/google";
 import { getAuth } from "@/utils/getAuth";
+import Navbar from "@/components/Navbar";
 import { startOfWeek, addDays, addWeeks, subWeeks, format } from "date-fns";
+
 
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700"] });
 const yesevaOne = Yeseva_One({ subsets: ["latin"], weight: ["400"] });
