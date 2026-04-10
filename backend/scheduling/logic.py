@@ -74,9 +74,6 @@ def create_event(request):
         return JsonResponse({"error": "Time slot is unavailable"}, status=400)
 
     if user_role == "ATHLETE":
-        if not check_events_overlap(user_id, start_time, end_time):
-            return JsonResponse({"error": "Time slot is unavailable"}, status=400)
-
         insert_response = supabase.table("events").insert({
             "athlete_id": user_id,
             "title": title,
@@ -99,13 +96,16 @@ def create_event(request):
         if not check_events_overlap(athlete_id, start_time, end_time):
             return JsonResponse({"error": "Time slot is unavailable for this athlete"}, status=400)
 
+        # Head coaches add events directly (confirmed); coaching staff submit requests (pending)
+        status = "CONFIRMED" if user_role == "HEAD_COACH" else "PENDING"
+
         insert_response = supabase.table("events").insert({
             "athlete_id": athlete_id,
             "title": title,
             "start_time": start_time,
             "end_time": end_time,
             "event_type": event_type,
-            "status": "PENDING",
+            "status": status,
             "visibility": "FULL"
         }).execute()
 
@@ -117,17 +117,111 @@ def create_event(request):
 
     return JsonResponse({"status": "success"})
 
-#NEEDS DISCUSSION
 @csrf_exempt
 def delete_event(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required"}, status=400)
 
-#NEEDS DISCUSSION
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_id = user.id
+    profile = supabase.table("profiles").select("role").eq("id", user_id).execute()
+    user_role = profile.data[0]["role"]
+
+    data = json.loads(request.body)
+    event_id = data.get("event_id")
+    if not event_id:
+        return JsonResponse({"error": "event_id is required"}, status=400)
+
+    event = supabase.table("events").select("*").eq("id", event_id).execute()
+    if not event.data:
+        return JsonResponse({"error": "Event not found"}, status=404)
+
+    event_data = event.data[0]
+
+    # Athletes can only delete their own events
+    if user_role == "ATHLETE":
+        if event_data["athlete_id"] != user_id:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+
+    # Head coaches can delete events for their linked athletes
+    elif user_role == "HEAD_COACH":
+        link = supabase.table("staff_athletes").select("id").eq("staff_id", user_id).eq("athlete_id", event_data["athlete_id"]).execute()
+        if not link.data:
+            return JsonResponse({"error": "Not linked to this athlete"}, status=403)
+
+    else:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    supabase.table("events").delete().eq("id", event_id).execute()
+    return JsonResponse({"status": "success"})
+
+
 @csrf_exempt
 def edit_event(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required"}, status=400)
+
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user = get_user_from_token(token)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_id = user.id
+    profile = supabase.table("profiles").select("role").eq("id", user_id).execute()
+    user_role = profile.data[0]["role"]
+
+    data = json.loads(request.body)
+    event_id = data.get("event_id")
+    if not event_id:
+        return JsonResponse({"error": "event_id is required"}, status=400)
+
+    event = supabase.table("events").select("*").eq("id", event_id).execute()
+    if not event.data:
+        return JsonResponse({"error": "Event not found"}, status=404)
+
+    event_data = event.data[0]
+
+    # Athletes can only edit their own events
+    if user_role == "ATHLETE":
+        if event_data["athlete_id"] != user_id:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+
+    # Head coaches can edit events for their linked athletes
+    elif user_role == "HEAD_COACH":
+        link = supabase.table("staff_athletes").select("id").eq("staff_id", user_id).eq("athlete_id", event_data["athlete_id"]).execute()
+        if not link.data:
+            return JsonResponse({"error": "Not linked to this athlete"}, status=403)
+
+    else:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    title = data.get("title", event_data["title"])
+    start_time = data.get("start_time", event_data["start_time"])
+    end_time = data.get("end_time", event_data["end_time"])
+    event_type = data.get("event_type", event_data["event_type"])
+
+    if datetime.fromisoformat(start_time) >= datetime.fromisoformat(end_time):
+        return JsonResponse({"error": "Invalid time range"}, status=400)
+
+    supabase.table("events").update({
+        "title": title,
+        "start_time": start_time,
+        "end_time": end_time,
+        "event_type": event_type,
+        "visibility": "BLOCKED" if event_type == "PERSONAL" else "FULL"
+    }).eq("id", event_id).execute()
+
+    return JsonResponse({"status": "success"})
 
 @csrf_exempt
 def approve_reject_event_request(request):

@@ -62,9 +62,21 @@ export default function SchedulePage() {
         fatigue: "5",
         mentalScore: "7",
     });
+    const [userId, setUserId] = useState<string>("");
+    const [selectedEvent, setSelectedEvent] = useState<BackendEvent | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingEventId, setEditingEventId] = useState<string>("");
+    const [editForm, setEditForm] = useState({
+        title: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        eventType: "TRAINING",
+    });
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [logError, setLogError] = useState("");
+    const [editError, setEditError] = useState("");
 
     const week = Array.from({ length: 7 }, (_, i) => {
         const date = addDays(currentWeekStart, i);
@@ -87,6 +99,7 @@ export default function SchedulePage() {
             if (res?.ok) {
                 const data = await res.json();
                 setRole(data.profile.role);
+                setUserId(data.profile.id);
             }
         };
         fetchProfile();
@@ -211,6 +224,75 @@ export default function SchedulePage() {
         }
     };
 
+    const handleDeleteEvent = async (eventId: string) => {
+        await getAuth(
+            "http://127.0.0.1:8000/api/scheduling/delete_event/",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ event_id: eventId }),
+            },
+            router
+        );
+        setSelectedEvent(null);
+        fetchEvents();
+    };
+
+    const openEditModal = (event: BackendEvent) => {
+        const start = new Date(event.start_time);
+        const end = new Date(event.end_time);
+        setEditForm({
+            title: event.title,
+            date: format(start, "yyyy-MM-dd"),
+            startTime: format(start, "HH:mm"),
+            endTime: format(end, "HH:mm"),
+            eventType: event.event_type,
+        });
+        setEditingEventId(event.id);
+        setEditError("");
+        setSelectedEvent(null);
+        setShowEditModal(true);
+    };
+
+    const handleEditEvent = async () => {
+        if (!editingEventId) return;
+        if (!editForm.title || !editForm.date || !editForm.startTime || !editForm.endTime) {
+            setEditError("All fields are required.");
+            return;
+        }
+        if (editForm.startTime >= editForm.endTime) {
+            setEditError("End time must be after start time.");
+            return;
+        }
+        setSubmitting(true);
+        setEditError("");
+        // We need to track which event is being edited
+        const res = await getAuth(
+            "http://127.0.0.1:8000/api/scheduling/edit_event/",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    event_id: editingEventId,
+                    title: editForm.title,
+                    start_time: `${editForm.date}T${editForm.startTime}:00`,
+                    end_time: `${editForm.date}T${editForm.endTime}:00`,
+                    event_type: editForm.eventType,
+                }),
+            },
+            router
+        );
+        setSubmitting(false);
+        if (res?.ok) {
+            setShowEditModal(false);
+            setEditingEventId("");
+            fetchEvents();
+        } else {
+            const data = await res?.json();
+            setEditError(data?.error || "Failed to update event.");
+        }
+    };
+
     const handleLogActivity = async () => {
         const load = parseFloat(logForm.load);
         const fatigue = parseFloat(logForm.fatigue);
@@ -283,7 +365,7 @@ export default function SchedulePage() {
                     {(!isStaff || selectedAthleteId) && (
                         <button onClick={() => setShowEventModal(true)}
                             className="px-4 py-2 bg-[#c8a84b] text-[#121914] font-bold rounded-lg hover:brightness-110 transition cursor-pointer">
-                            {isStaff ? "+ Request Session" : "+ New Event"}
+                            {role === "HEAD_COACH" ? "+ Add Event" : role === "COACHING_STAFF" ? "+ Request Session" : "+ New Event"}
                         </button>
                     )}
                 </div>
@@ -362,9 +444,11 @@ export default function SchedulePage() {
                                     className="border-r border-b border-[#c8a84b33] p-1 min-h-[56px] bg-[#121914]">
                                     {getEventsForCell(dayIndex, hour).map((event) => {
                                         const { label, colorClass } = getEventDisplay(event);
+                                        const clickable = !(isStaff && event.visibility === "BLOCKED");
                                         return (
                                             <div key={event.id}
-                                                className={`text-xs font-semibold px-2 py-1 rounded mb-1 truncate ${colorClass}`}
+                                                onClick={() => clickable && setSelectedEvent(event)}
+                                                className={`text-xs font-semibold px-2 py-1 rounded mb-1 truncate ${colorClass} ${clickable ? "cursor-pointer hover:brightness-110" : ""}`}
                                                 title={label}>
                                                 {label}
                                             </div>
@@ -382,7 +466,7 @@ export default function SchedulePage() {
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
                     <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-8 w-full max-w-md mx-4">
                         <h2 className={`${yesevaOne.className} text-white text-xl mb-6`}>
-                            {isStaff ? "Request Session" : "New Event"}
+                            {role === "HEAD_COACH" ? "Add Event" : role === "COACHING_STAFF" ? "Request Session" : "New Event"}
                         </h2>
                         <div className="flex flex-col gap-4">
                             <div>
@@ -448,9 +532,14 @@ export default function SchedulePage() {
                                     </div>
                                 )}
                             </div>
-                            {isStaff && (
+                            {role === "COACHING_STAFF" && (
                                 <p className="text-[#9cbcd9] text-xs bg-[#121914] rounded-lg px-3 py-2 border border-[#c8a84b33]">
                                     This will appear as pending on the athlete's schedule until they approve it.
+                                </p>
+                            )}
+                            {role === "HEAD_COACH" && (
+                                <p className="text-[#9cbcd9] text-xs bg-[#121914] rounded-lg px-3 py-2 border border-[#c8a84b33]">
+                                    As head coach, this event will be added directly to the athlete's schedule.
                                 </p>
                             )}
                             {formError && <p className="text-red-400 text-sm">{formError}</p>}
@@ -463,11 +552,119 @@ export default function SchedulePage() {
                                     className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
                                     {submitting
                                         ? "Creating..."
-                                        : isStaff
+                                        : role === "COACHING_STAFF"
                                         ? "Send Request"
                                         : form.repeat
                                         ? `Create ${form.repeatWeeks} Events`
                                         : "Create"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Event Detail Modal */}
+            {selectedEvent && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setSelectedEvent(null)}>
+                    <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-8 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between mb-4">
+                            <div>
+                                <h2 className={`${yesevaOne.className} text-white text-xl`}>{selectedEvent.title}</h2>
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${EVENT_COLORS[selectedEvent.event_type] ?? "bg-[#1a261e] text-white"}`}>
+                                    {selectedEvent.event_type.charAt(0) + selectedEvent.event_type.slice(1).toLowerCase()}
+                                </span>
+                            </div>
+                            <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-white text-xl cursor-pointer">×</button>
+                        </div>
+                        <div className="space-y-2 mb-6 text-sm">
+                            <p className="text-[#9cbcd9]">
+                                {new Date(selectedEvent.start_time).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                            </p>
+                            <p className="text-white">
+                                {new Date(selectedEvent.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                                {" – "}
+                                {new Date(selectedEvent.end_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                            </p>
+                            {selectedEvent.status === "PENDING" && (
+                                <p className="text-[#c8a84b] text-xs font-semibold">Pending approval</p>
+                            )}
+                        </div>
+                        {/* Athletes can edit/delete their own events; HEAD_COACH can edit/delete for linked athletes */}
+                        {(role === "ATHLETE" && selectedEvent.athlete_id === userId) || role === "HEAD_COACH" ? (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => openEditModal(selectedEvent)}
+                                    className="flex-1 py-2 rounded-lg bg-[#9cbcd9] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer">
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                                    className="flex-1 py-2 rounded-lg bg-[#7c4a4a] text-white font-bold text-sm hover:brightness-110 transition cursor-pointer">
+                                    Delete
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setSelectedEvent(null)}
+                                className="w-full py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm hover:border-[#9cbcd9] transition cursor-pointer">
+                                Close
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Event Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                    <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-8 w-full max-w-md mx-4">
+                        <h2 className={`${yesevaOne.className} text-white text-xl mb-6`}>Edit Event</h2>
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="text-[#9cbcd9] text-sm mb-1 block">Title</label>
+                                <input type="text" value={editForm.title}
+                                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                    className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]" />
+                            </div>
+                            <div>
+                                <label className="text-[#9cbcd9] text-sm mb-1 block">Date</label>
+                                <input type="date" value={editForm.date}
+                                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                    className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[#9cbcd9] text-sm mb-1 block">Start Time</label>
+                                    <input type="time" value={editForm.startTime}
+                                        onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                                        className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]" />
+                                </div>
+                                <div>
+                                    <label className="text-[#9cbcd9] text-sm mb-1 block">End Time</label>
+                                    <input type="time" value={editForm.endTime}
+                                        onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                                        className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[#9cbcd9] text-sm mb-1 block">Event Type</label>
+                                <select value={editForm.eventType}
+                                    onChange={(e) => setEditForm({ ...editForm, eventType: e.target.value })}
+                                    className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]">
+                                    {(role === "ATHLETE" ? ATHLETE_EVENT_TYPES : STAFF_EVENT_TYPES).map((t) => (
+                                        <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {editError && <p className="text-red-400 text-sm">{editError}</p>}
+                            <div className="flex gap-3 mt-2">
+                                <button onClick={() => { setShowEditModal(false); setEditError(""); }}
+                                    className="flex-1 py-2 rounded-lg border border-[#c8a84b33] text-[#9cbcd9] text-sm hover:border-[#9cbcd9] transition cursor-pointer">
+                                    Cancel
+                                </button>
+                                <button onClick={handleEditEvent} disabled={submitting}
+                                    className="flex-1 py-2 rounded-lg bg-[#c8a84b] text-[#121914] font-bold text-sm hover:brightness-110 transition cursor-pointer disabled:opacity-50">
+                                    {submitting ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
                         </div>
