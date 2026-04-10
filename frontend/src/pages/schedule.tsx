@@ -372,7 +372,8 @@ export default function SchedulePage() {
                     )}
                     {/* HEAD COACH */}
                     {(isHeadCoach && selectedAthleteId) && (
-                        <button onClick={() => {setIsMatch(true); setShowEventModal(true);}}
+                        <button onClick={() => 
+                            {setIsMatch(true); setForm(prev => ({ ...prev, eventType: "MATCH" })); setShowEventModal(true);}}
                             className="px-4 py-2 bg-[#d5d131] text-[#121914] font-bold rounded-lg cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                             + Add Match
                         </button>
@@ -506,7 +507,9 @@ export default function SchedulePage() {
                                             const startHour = start.getHours() + start.getMinutes() / 60;
                                             const endHour = end.getHours() + end.getMinutes() / 60;
                                             const top = (startHour - 5) * 56;
-                                            const height = (endHour - startHour) * 56;
+                                            const minHeight = 28;
+                                            const rawHeight = (endHour - startHour) * 56;
+                                            const height = Math.max(minHeight, rawHeight);
                                             const { label, colorClass } = getEventDisplay(event);
                                             const clickable = !(isStaff && event.visibility === "BLOCKED");
                                             return (
@@ -515,7 +518,9 @@ export default function SchedulePage() {
                                                     onClick={() => clickable && setSelectedEvent(event)}
                                                     className={`absolute left-1 right-1 rounded px-2 py-1 text-xs font-semibold ${colorClass} ${clickable ? "cursor-pointer hover:brightness-110" : ""}`}
                                                     style={{top: `${top}px`, height: `${height}px`}}>
-                                                    {label}
+                                                    <div className="w-full h-full leading-tight overflow-hidden">
+                                                        {label}
+                                                    </div>
                                                 </div>
                                             );
                                         })}
@@ -681,11 +686,11 @@ export default function SchedulePage() {
                                 {new Date(selectedEvent.end_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                             </p>
                             {selectedEvent.status === "PENDING" && (
-                                <p className="text-[#c8a84b] text-xs font-semibold">Pending approval</p>
+                                <p className="text-[#d5d131] text-xs font-semibold">Pending approval</p>
                             )}
                         </div>
-                        {/* Athletes can edit/delete their own events; HEAD_COACH can edit/delete for linked athletes */}
-                        {(role === "ATHLETE" && selectedEvent.athlete_id === userId) || role === "HEAD_COACH" ? (
+                        {/* Athletes can edit/delete their own events; HEAD_COACH can edit/delete matches for linked athletes */}
+                        {(role === "ATHLETE" && selectedEvent.athlete_id === userId) || role === "HEAD_COACH" && selectedEvent.event_type === "MATCH" ? (
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => openEditModal(selectedEvent)}
@@ -708,6 +713,7 @@ export default function SchedulePage() {
                 </div>
             )}
 
+            {/* Delete Confirmation Modal */}
             {eventToDelete && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 w-full max-w-md">
