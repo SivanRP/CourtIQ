@@ -148,6 +148,21 @@ export default function Dashboard() {
         ],
     };
 
+    const fatigueData = {
+        labels: stats?.activity_logs.map((log) =>
+            new Date(log.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        ) ?? [],
+        datasets: [
+            {
+                label: "Fatigue",
+                data: stats?.activity_logs.map((log) => log.fatigue) ?? [],
+                backgroundColor: "#9cbcd9",
+                borderColor: "#9cbcd9",
+                tension: 0.3,
+            },
+        ],
+    };
+
     const totalWins = stats?.match_statistics.reduce((sum, m) => sum + m.wins, 0) ?? 0;
     const totalLosses = stats?.match_statistics.reduce((sum, m) => sum + m.losses, 0) ?? 0;
     const winRate = totalWins + totalLosses > 0
@@ -243,6 +258,19 @@ export default function Dashboard() {
                                 </p>
                             )}
                         </div>
+
+                        <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
+                            <h2 className="text-white font-bold mb-1">Fatigue</h2>
+                            <p className="text-[#9cbcd9] text-xs mb-4">Training fatigue over time (1–10 scale)</p>
+                            {fatigueData.labels.length > 0 ? (
+                                <Line data={fatigueData} options={chartOptions} />
+                            ) : (
+                                <p className="text-[#9cbcd9] text-sm text-center py-10">
+                                    No activity data for this period.
+                                </p>
+                            )}
+                        </div>
+
                     </div>
                 )}
             </div>

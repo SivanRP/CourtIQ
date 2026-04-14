@@ -15,7 +15,7 @@ export default function LoginSignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-
+  
   const handleSubmit = async () => {
     setErrors({});
     if (isSignUp) {
@@ -62,24 +62,23 @@ export default function LoginSignupPage() {
         setErrors({general: "* Invalid username or password *"})
       }
     }
-  }
-};
+  }};
 
-const handleForgotPassword = async () => {
-  setErrors({});
-  const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({email: form.email}),
-  });
-  const result = await response.json();
-  if (response.ok) {
-    setShowForgotPassword(false);
-    setSuccess("Password reset email sent! Please check your inbox.");
-  } else {
-    setErrors({general: "* " + result.error + " *"})
-  }
-};
+  const handleForgotPassword = async () => {
+    setErrors({});
+    const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: form.email}),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      setShowForgotPassword(false);
+      setSuccess("Password reset email sent successfully!");
+    } else {
+      setErrors({general: "* " + result.error + " *"})
+    }
+  };
 
   return (
     <div className={`${lato.className} flex flex-col min-h-screen items-center justify-center bg-[#1a261e] pb-16`}>
@@ -189,11 +188,49 @@ const handleForgotPassword = async () => {
           </div>
           {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
         </div>
-        
-        
 
+        {errors.general && <p className="text-[#d5d131] text-xs mt-1"> {errors.general}</p>}
 
-        {showForgotPassword && (
+        <button 
+          onClick={handleSubmit}
+          className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest mt-2 cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
+          {isSignUp ? "SIGN UP" : "LOG IN"}
+        </button>
+
+        <div className="text-center text-white text-sm mt-2">
+          {isSignUp ? "Already have an account?" : "Don't have an account?"} 
+          <button
+            onClick={() => {
+              setIsSignUp(p => !p);
+              setForm({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
+              setErrors({});
+              setShowPassword(false);
+            }}
+            className="text-[#9cbcd9] font-bold bg-transparent border-none cursor-pointer transition-transform hover:scale-105 active:scale-100 active:brightness-75 ml-2">
+            {isSignUp ? "Log In" : "Sign Up"}
+          </button>
+        </div>
+      </div>
+
+      {success && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
+            <h3 className={`${yesevaOne.className} text-white text-lg font-bold mb-2`}>
+              {success}
+            </h3>
+            <p className="text-[#9cbcd9] text-sm mb-6">
+              Please click continue to proceed to login.
+            </p>
+            <button
+              onClick={() => setSuccess("")}
+              className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-lg font-bold text-sm hover:scale-105 transition">
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForgotPassword && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
             <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
               <h2 className={`${yesevaOne.className} text-white text-lg mb-4`}>Reset Password</h2>
@@ -233,47 +270,6 @@ const handleForgotPassword = async () => {
             </div>
           </>
         )}
-
-        {errors.general && <p className="text-[#d5d131] text-xs mt-1"> {errors.general}</p>}
-
-        <button 
-          onClick={handleSubmit}
-          className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest mt-2 cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
-          {isSignUp ? "SIGN UP" : "LOG IN"}
-        </button>
-
-        <div className="text-center text-white text-sm mt-2">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"} 
-          <button
-            onClick={() => {
-              setIsSignUp(p => !p);
-              setForm({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
-              setErrors({});
-              setShowPassword(false);
-            }}
-            className="text-[#9cbcd9] font-bold bg-transparent border-none cursor-pointer transition-transform hover:scale-105 active:scale-100 active:brightness-75 ml-2">
-            {isSignUp ? "Log In" : "Sign Up"}
-          </button>
-        </div>
-      </div>
-
-      {success && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
-            <h3 className="text-white text-lg font-bold mb-2">
-              You are all signed up!
-            </h3>
-            <p className="text-[#9cbcd9] text-sm mb-6">
-              Please click continue to proceed to login.
-            </p>
-            <button
-              onClick={() => setSuccess("")}
-              className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-lg font-bold text-sm hover:scale-105 transition">
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );
