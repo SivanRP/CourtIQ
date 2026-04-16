@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback } from "react";
 import { Lato, Yeseva_One } from "next/font/google";
+import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import {
     Chart as ChartJS,
@@ -15,6 +16,7 @@ import {
 } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { getAuth } from "../utils/getAuth";
+
 
 ChartJS.register(
     CategoryScale,
@@ -158,7 +160,7 @@ export default function Dashboard() {
             {
                 label: "Match Results",
                 data: [totalWins, totalLosses],
-                backgroundColor: ["#c8a84b", "#9cbcd9"],
+                backgroundColor: ["#d5d131", "#9cbcd9"],
             },
         ],
     };
@@ -167,26 +169,8 @@ export default function Dashboard() {
 
     return (
         <div className={`${lato.className} min-h-screen bg-[#121914]`}>
-            <nav className="w-full flex items-center justify-between px-8 pt-2 pb-1 bg-[#1a261e] border-b border-[#c8a84b33]">
-                <Image src="/CourtIQlogo.png" alt="CourtIQ Logo" width={187.5} height={75} priority />
-                <div className="flex items-center gap-6">
-                    <button className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer px-5 h-18 bg-[#121914] border-b border-[#c8a84b33] border-2">
-                        Dashboard
-                    </button>
-                    <button onClick={() => router.push("/schedule")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Schedule
-                    </button>
-                    <button onClick={() => router.push("/profile")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Profile
-                    </button>
-                    <button onClick={() => { localStorage.removeItem("token"); router.push("/"); }}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Log Out
-                    </button>
-                </div>
-            </nav>
+        
+            <Navbar/>
 
             <div className="px-10 py-8">
                 <div className="flex items-center justify-between mb-6">
@@ -194,7 +178,9 @@ export default function Dashboard() {
                         <h1 className={`${yesevaOne.className} text-white text-3xl`}>Dashboard</h1>
                         {isStaff && selectedAthlete && (
                             <p className="text-[#9cbcd9] text-sm mt-1">
-                                Viewing: {selectedAthlete.first_name} {selectedAthlete.last_name} (@{selectedAthlete.username})
+                                Viewing: {selectedAthlete.first_name} {selectedAthlete.last_name} (
+                                    <span className="text-[#d5d131]">@{selectedAthlete.username}</span>
+                                )
                             </p>
                         )}
                     </div>
@@ -215,11 +201,11 @@ export default function Dashboard() {
                             <span className="text-gray-400 text-sm">No linked athletes</span>
                         )}
                         <button onClick={() => setPeriod("week")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors cursor-pointer ${period === "week" ? "bg-[#9cbcd9] text-[#121914]" : "bg-[#1a261e] text-white border border-[#c8a84b33]"}`}>
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-transform transition-colors cursor-pointer ${period === "week" ? "bg-[#9cbcd9] text-[#121914] hover:brightness-110 hover:scale-103" : "bg-[#1a261e] text-white border border-[#c8a84b33] hover:border-[#9cbcd9] hover:scale-103"}`}>
                             Last 7 Days
                         </button>
                         <button onClick={() => setPeriod("month")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors cursor-pointer ${period === "month" ? "bg-[#9cbcd9] text-[#121914]" : "bg-[#1a261e] text-white border border-[#c8a84b33]"}`}>
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-transform transition-colors cursor-pointer ${period === "month" ? "bg-[#9cbcd9] text-[#121914] hover:brightness-110 hover:scale-103" : "bg-[#1a261e] text-white border border-[#c8a84b33] hover:border-[#9cbcd9] hover:scale-103"}`}>
                             Last 30 Days
                         </button>
                     </div>
@@ -247,7 +233,7 @@ export default function Dashboard() {
 
                         <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
                             <h2 className="text-white font-bold mb-1">Win Rate</h2>
-                            <p className="text-[#c8a84b] text-2xl font-bold mb-1">{winRate}%</p>
+                            <p className="text-[#d5d131] text-2xl font-bold mb-1">{winRate}%</p>
                             <p className="text-[#9cbcd9] text-xs mb-4">{totalWins}W – {totalLosses}L this period</p>
                             {totalWins + totalLosses > 0 ? (
                                 <Bar data={winRateData} options={chartOptions} />

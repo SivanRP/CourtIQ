@@ -3,6 +3,8 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Lato, Yeseva_One } from "next/font/google";
 import { getAuth } from "@/utils/getAuth";
+import Navbar from "@/components/Navbar";
+import { get } from "http";
 
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700"] });
 const yesevaOne = Yeseva_One({ subsets: ["latin"], weight: ["400"] });
@@ -43,6 +45,7 @@ export default function ProfilePage() {
     const [loadingLinked, setLoadingLinked] = useState(true);
     const [linkMessage, setLinkMessage] = useState("");
     const [linkError, setLinkError] = useState(false);
+    const [userToRemove, setUserToRemove] = useState<LinkedUser | null>(null);
 
     const fetchLinked = async (role: string) => {
         setLoadingLinked(true);
@@ -105,27 +108,8 @@ export default function ProfilePage() {
 
     return (
         <div className={`${lato.className} min-h-screen bg-[#121914]`}>
-            <nav className="w-full flex items-center justify-between px-8 pt-2 pb-1 bg-[#1a261e] border-b border-[#c8a84b33]">
-                <Image src="/CourtIQlogo.png" alt="CourtIQ Logo" width={187.5} height={75} priority />
-                <div className="flex items-center gap-6">
-                    <button onClick={() => router.push("/dashboard")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Dashboard
-                    </button>
-                    <button onClick={() => router.push("/schedule")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Schedule
-                    </button>
-                    <button onClick={() => router.push("/profile")}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer px-5 h-18 bg-[#121914] border-b border-[#c8a84b33] border-2">
-                        Profile
-                    </button>
-                    <button onClick={() => { localStorage.removeItem("token"); router.push("/"); }}
-                        className="text-white text-m hover:text-[#9cbcd9] transition-colors cursor-pointer bg-transparent border-none">
-                        Log Out
-                    </button>
-                </div>
-            </nav>
+
+            <Navbar/>
 
             <div className="max-w-4xl mx-auto mt-10 px-6">
                 {/* Profile Info */}
@@ -135,19 +119,19 @@ export default function ProfilePage() {
                     </h2>
                     <div className="space-y-3 text-white">
                         <p>
-                            <span className="text-[#9cbcd9]">Name:</span>{" "}
+                            <span className="text-[#9cbcd9] font-semibold pr-2">Name:</span>
                             {profile ? `${profile.first_name} ${profile.last_name}` : "..."}
                         </p>
                         <p>
-                            <span className="text-[#9cbcd9]">Username:</span>{" "}
+                            <span className="text-[#9cbcd9] font-semibold pr-1">Username:</span>
                             {profile?.username || "..."}
                         </p>
                         <p>
-                            <span className="text-[#9cbcd9]">Email:</span>{" "}
+                            <span className="text-[#9cbcd9] font-semibold pr-2">Email:</span>
                             {profile?.email || "..."}
                         </p>
                         <p>
-                            <span className="text-[#9cbcd9]">Role:</span>{" "}
+                            <span className="text-[#9cbcd9] font-semibold pr-2">Role:</span>
                             {profile?.role ? profile.role.replace("_", " ") : "..."}
                         </p>
                     </div>
@@ -165,13 +149,13 @@ export default function ProfilePage() {
                     ) : (
                         <ul className="space-y-2">
                             {linked.map((user) => (
-                                <li key={user.id} className="flex items-center justify-between text-white py-2 border-b border-[#c8a84b22] last:border-0">
+                                <li key={user.id} className="flex items-center justify-between text-white py-2 border-b border-[#c8a84b33] last:border-0">
                                     <div>
                                         <span className="font-semibold">{user.first_name} {user.last_name}</span>
-                                        <span className="text-[#9cbcd9] text-sm ml-2">@{user.username}</span>
+                                        <span className="text-[#d5d131] text-sm ml-2">@{user.username}</span>
                                     </div>
                                     <button
-                                        onClick={() => handleRemove(user.id)}
+                                        onClick={() => setUserToRemove(user)}
                                         className="text-sm text-red-400 hover:text-red-300 transition-colors cursor-pointer">
                                         Remove
                                     </button>
@@ -199,17 +183,44 @@ export default function ProfilePage() {
                         />
                         <button
                             onClick={handleAdd}
-                            className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold cursor-pointer hover:brightness-110 transition">
+                            className="px-4 py-2 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
                             Add
                         </button>
                     </div>
                     {linkMessage && (
-                        <p className={`mt-2 text-sm ${linkError ? "text-red-400" : "text-green-400"}`}>
+                        <p className={`mt-2 text-sm ${linkError ? "text-red-400" : "text-[#d5d131]"}`}>
                             {linkMessage}
                         </p>
                     )}
                 </div>
             </div>
+
+            {userToRemove && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-6 w-full max-w-md">
+                        <h2 className={`${yesevaOne.className} text-xl text-white mb-4`}>
+                            Confirm Removal
+                        </h2>
+                        <p className="text-white mb-6">
+                            Are you sure you want to remove{" "}
+                            <span className="text-[#d5d131] font-semibold">{userToRemove.first_name} {userToRemove.last_name}</span>
+                            ?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setUserToRemove(null)}
+                                className="px-4 py-2 text-gray-400 hover:text-white">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {await handleRemove(userToRemove.id); setUserToRemove(null);}}
+                                className="px-4 py-2 bg-red-400 text-[#121914] rounded font-bold cursor-pointer transition-transform hover:brightness-110 hover:scale-103 active:scale-100 active:brightness-75">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
