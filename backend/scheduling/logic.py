@@ -17,6 +17,7 @@ supabase_key = env_variables["DATABASE_KEY"]
 #Creating a client to access the Supabase database
 supabase = create_client(supabase_url, supabase_key)
 
+#Function for retrieving a Supabase user from a given auth token
 def get_user_from_token(token):
     try:
         response = supabase.auth.get_user(token)
@@ -24,6 +25,9 @@ def get_user_from_token(token):
     except Exception:
         return None
 
+#Method to check events overlap
+# - Accesses "events" table from the Supabase
+# - Checks if start and end time of the new event doesn't overlap with the existing event
 def check_events_overlap(user_id, start_time, end_time):
     new_start = datetime.fromisoformat(start_time)
     new_end = datetime.fromisoformat(end_time)
@@ -39,6 +43,11 @@ def check_events_overlap(user_id, start_time, end_time):
 
     return True
 
+#Method to create event in the Supabase table "events"
+# - Creates event in the Supabase table "events"
+# - Check the roles in order to assign status [CONFIRMED, PENDING]
+# - Gets the data from the frontend using "POST" request
+# - Calls helper function check_events_overlap(user_id, start_time, end_time)
 @csrf_exempt
 def create_event(request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -63,7 +72,7 @@ def create_event(request):
     end_time = data.get("end_time")
     event_type = data.get("event_type")
 
-    # Performing checks of the data provided by the user
+    #Performing checks of the data provided by the user
     if not title or not start_time or not end_time or not event_type:
         return JsonResponse({"error": "All fields are required"}, status=400)
 
@@ -117,6 +126,10 @@ def create_event(request):
 
     return JsonResponse({"status": "success"})
 
+#Method to delete event in the Supabase table "events"
+# - Gets the data from the frontend using "POST" request
+# - Performs role checking and deletes the event associated with event_id
+# - Performs checks, such as checking if there is an event
 @csrf_exempt
 def delete_event(request):
     if request.method != "POST":
@@ -162,7 +175,10 @@ def delete_event(request):
     supabase.table("events").delete().eq("id", event_id).execute()
     return JsonResponse({"status": "success"})
 
-
+#Method to edit event in the Supabase table "events"
+# - Gets the data from the user to change the event (time, type, title)
+# - Updates the event entry in table in the database with the new data
+# - Performs checks, such as checking if there is an event
 @csrf_exempt
 def edit_event(request):
     if request.method != "POST":
@@ -213,6 +229,7 @@ def edit_event(request):
     if datetime.fromisoformat(start_time) >= datetime.fromisoformat(end_time):
         return JsonResponse({"error": "Invalid time range"}, status=400)
 
+    #Updating the event with the new data
     supabase.table("events").update({
         "title": title,
         "start_time": start_time,
@@ -223,6 +240,10 @@ def edit_event(request):
 
     return JsonResponse({"status": "success"})
 
+#Method for approving and rejecting events
+# - Performs checks of the data
+# - If event is rejected, delete it from the database
+# -  #If event is approved, update its status to "CONFIRMED"
 @csrf_exempt
 def approve_reject_event_request(request):
     if request.method != "POST":
@@ -238,11 +259,13 @@ def approve_reject_event_request(request):
     if not event_id:
         return JsonResponse({"error": "Missing information"}, status=400)
 
+    #If event is rejected, delete it from the database
     if reject_approve == "REJECT":
         supabase.table("events").delete().eq("id", event_id).execute()
 
         return JsonResponse({"status": "success", "action": "REJECT", "event_id": event_id})
 
+    #If event is approved, update its status to "CONFIRMED"
     if reject_approve == "APPROVE":
         response = supabase.table("events").update({"status": "CONFIRMED"}).eq("id", event_id).execute()
 
@@ -250,6 +273,11 @@ def approve_reject_event_request(request):
 
     return JsonResponse({"error": "Invalid action"}, status=400)
 
+#Method for getting the weekly schedule
+# - Get the weekly schedule for the specified week
+# - Extracts the user token to access current user's id
+# - Gets the athlete id for coaching staff or head coach only
+# - Returns events for the specified week based either on user's id for athlete or based on athlete's for coaching staff or caoch
 @csrf_exempt
 def get_weekly_schedule(request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -272,12 +300,15 @@ def get_weekly_schedule(request):
     end_of_week = data.get("end_of_week")
     athlete_id = data.get("athlete_id") #field only for HEAD_COACH or COACHING_STAFF
 
+    #If the user is athlete, get the schedule for the athlete
     if user_role == "ATHLETE":
         if not end_of_week or not start_of_week:
             return JsonResponse({"error": "Missing information"}, status=400)
 
         athlete_id = user_id
         response = supabase.table("events").select("*").eq("athlete_id", athlete_id).in_("status", ["CONFIRMED", "PENDING"]).gte("end_time", start_of_week).lt("start_time", end_of_week).execute()
+
+    # If the user is a head coach or coaching staff, get the schedule for the athlete specified with the user_id
     elif (user_role == "HEAD_COACH" or user_role == "COACHING_STAFF"):
         if not athlete_id or not end_of_week or not start_of_week:
             return JsonResponse({"error": "Missing information"}, status=400)
@@ -291,6 +322,8 @@ def get_weekly_schedule(request):
 
     return JsonResponse({"events": events})
 
+#Method for getting the rejected events
+# - Returns the list of rejected events for the user
 @csrf_exempt
 def get_rejected_events(request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
@@ -311,7 +344,13 @@ def get_rejected_events(request):
 
     return JsonResponse({"events": []})
 
-
+#Method for getting the statistics
+# - Retrieves activity logs and match statistics for a week or a month
+# - Extracts the user token to access current user's id
+# - Athletes can only access their own data
+# - Coaching staff and head coaches can specify an athlete ID
+# - Filters data based on the selected time period
+# - Returns activity logs and match statistics within the specified period
 @csrf_exempt
 def get_statistics(request):
     if request.method != "GET":
@@ -331,11 +370,13 @@ def get_statistics(request):
     profile = supabase.table("profiles").select("role").eq("id", user.id).execute()
     role = profile.data[0]["role"]
 
+    #Checking if the user is ATHLETE
     if role == "ATHLETE":
         athlete_id = user.id
 
     now = datetime.utcnow()
 
+    #Specifying the period of time
     if period == "week":
         start_date = (now - timedelta(days=7)).isoformat()
     elif period == "month":
@@ -343,10 +384,12 @@ def get_statistics(request):
     else:
         return JsonResponse({"error": "Invalid period. Use 'week' or 'month'"}, status=400)
 
+    #Selecting the data from activity_logs table
     logs = supabase.table("activity_logs").select("*").eq(
         "athlete_id", athlete_id
     ).gte("date", start_date).execute()
 
+    #Selecting the data from match_statistics table
     match_stats = supabase.table("match_statistics").select("*").eq(
         "athlete_id", athlete_id
     ).gte("match_date", start_date).execute()
@@ -357,7 +400,14 @@ def get_statistics(request):
         "match_statistics": match_stats.data
     })
 
-
+#Method for getting the weekly summary
+# - Extracts the user token to access current user's id
+# - Athletes can only access their own data
+# - Coaching staff and head coaches can specify an athlete ID
+# - Requires start and end dates for the week
+# - Retrieves activity logs within the specified date range
+# - Computes averages for load, fatigue, and mental score metrics
+# - Returns the average load, fatigue, and mental score
 @csrf_exempt
 def get_weekly_summary(request):
     if request.method != "POST":
@@ -416,7 +466,10 @@ def get_weekly_summary(request):
         }
     })
 
-
+#Method for logging activity
+# - Allows only athletes to log activity data
+# - Inserts activity log in the table "activity_logs"
+# - Returns success or error response
 @csrf_exempt
 def log_activity(request):
     if request.method != "POST":
