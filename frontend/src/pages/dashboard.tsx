@@ -16,6 +16,7 @@ import {
 } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { getAuth } from "../utils/getAuth";
+import { Weight } from "lucide-react";
 
 
 ChartJS.register(
@@ -65,7 +66,7 @@ const chartOptions = {
     },
     scales: {
         x: { ticks: { color: "#9cbcd9" }, grid: { color: "#1a261e" } },
-        y: { ticks: { color: "#9cbcd9" }, grid: { color: "#1a261e" } },
+        y: { min: 1, max: 10, ticks: { stepSize: 1, color: "#9cbcd9" }, grid: { color: "#1a261e" } },
     },
 };
 
@@ -163,6 +164,22 @@ export default function Dashboard() {
         ],
     };
 
+    const mentalScoreData = {
+        labels: stats?.activity_logs.map((log) =>
+            new Date(log.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        ) ?? [],
+        datasets: [
+            {
+                label: "Mental Score",
+                data: stats?.activity_logs.map((log) => log.mental_score) ?? [],
+                backgroundColor: "#9cbcd9",
+                borderColor: "#9cbcd9",
+                tension: 0.3,
+            },
+        ],
+    };
+
+
     const totalWins = stats?.match_statistics.reduce((sum, m) => sum + m.wins, 0) ?? 0;
     const totalLosses = stats?.match_statistics.reduce((sum, m) => sum + m.losses, 0) ?? 0;
     const winRate = totalWins + totalLosses > 0
@@ -235,18 +252,6 @@ export default function Dashboard() {
                 ) : (
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                         <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
-                            <h2 className="text-white font-bold mb-1">Workload</h2>
-                            <p className="text-[#9cbcd9] text-xs mb-4">Training load over time (1–10 scale)</p>
-                            {workloadData.labels.length > 0 ? (
-                                <Line data={workloadData} options={chartOptions} />
-                            ) : (
-                                <p className="text-[#9cbcd9] text-sm text-center py-10">
-                                    No activity data for this period.
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
                             <h2 className="text-white font-bold mb-1">Win Rate</h2>
                             <p className="text-[#d5d131] text-2xl font-bold mb-1">{winRate}%</p>
                             <p className="text-[#9cbcd9] text-xs mb-4">{totalWins}W – {totalLosses}L this period</p>
@@ -260,10 +265,34 @@ export default function Dashboard() {
                         </div>
 
                         <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
+                            <h2 className="text-white font-bold mb-1">Workload</h2>
+                            <p className="text-[#9cbcd9] text-xs mb-4">Training load over time (1–10 scale)</p>
+                            {workloadData.labels.length > 0 ? (
+                                <Line data={workloadData} options={chartOptions} />
+                            ) : (
+                                <p className="text-[#9cbcd9] text-sm text-center py-10">
+                                    No activity data for this period.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
                             <h2 className="text-white font-bold mb-1">Fatigue</h2>
                             <p className="text-[#9cbcd9] text-xs mb-4">Training fatigue over time (1–10 scale)</p>
                             {fatigueData.labels.length > 0 ? (
                                 <Line data={fatigueData} options={chartOptions} />
+                            ) : (
+                                <p className="text-[#9cbcd9] text-sm text-center py-10">
+                                    No activity data for this period.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="bg-[#1a261e] rounded-2xl p-6 border border-[#c8a84b33]">
+                            <h2 className="text-white font-bold mb-1">Mental Score</h2>
+                            <p className="text-[#9cbcd9] text-xs mb-4">Mental score over time (1–10 scale)</p>
+                            {mentalScoreData.labels.length > 0 ? (
+                                <Line data={mentalScoreData} options={chartOptions} />
                             ) : (
                                 <p className="text-[#9cbcd9] text-sm text-center py-10">
                                     No activity data for this period.
