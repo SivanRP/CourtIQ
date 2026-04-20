@@ -102,16 +102,20 @@ def sign_up(request):
         return JsonResponse({"error": "Failed to create account"}, status=400)
 
     user = auth_response.user
+    if not user:
+        return JsonResponse({"error": "Failed to create account"}, status=400)
 
-    #Inserting into the profile table additional information about the user and linking user Supabase table and profiles table with user.id
-    insert_response = supabase.table("profiles").insert({
-        "id": user.id,
-        "username": username,
-        "first_name": first_name,
-        "last_name": last_name,
-        "role": role,
-        "email": email
-    }).execute()
+    try:
+        insert_response = supabase.table("profiles").insert({
+            "id": user.id,
+            "username": username,
+            "first_name": first_name,
+            "last_name": last_name,
+            "role": role,
+            "email": email
+        }).execute()
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to save profile: {str(e)}"}, status=400)
 
     if not insert_response.data:
         return JsonResponse({"error": "Failed to save profile"}, status=400)
