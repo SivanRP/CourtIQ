@@ -5,8 +5,8 @@ from gotrue.errors import AuthApiError
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
-supabase_url = os.environ.get("SUPABASE_URL", "")
-supabase_key = os.environ.get("SUPABASE_KEY", "")
+supabase_url = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co")
+supabase_key = os.environ.get("SUPABASE_KEY", "placeholder-key")
 
 supabase = create_client(supabase_url, supabase_key)
 
