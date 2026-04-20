@@ -1,7 +1,6 @@
 import json
 import os
 from supabase import create_client
-from gotrue.errors import AuthApiError
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
@@ -99,7 +98,7 @@ def sign_up(request):
             "email": email,
             "password": password
         })
-    except AuthApiError:
+    except Exception:
         return JsonResponse({"error": "Failed to create account"}, status=400)
 
     user = auth_response.user
@@ -150,10 +149,8 @@ def log_in(request):
             "email": email,
             "password": password
         })
-    except AuthApiError as e:
-        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
-        return JsonResponse({"error": f"Auth error: {str(e)}"}, status=500)
+        return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"token": auth_response.session.access_token})
 
@@ -367,7 +364,7 @@ def reset_password(request):
 
     try:
         supabase.auth.reset_password_email(email)
-    except AuthApiError as e:
+    except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"status": "success"})
@@ -397,7 +394,7 @@ def update_password(request):
 
     try:
         supabase.auth.update_user({"password": new_password})
-    except AuthApiError as e:
+    except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"status": "success"})
