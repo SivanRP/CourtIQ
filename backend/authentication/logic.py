@@ -1,7 +1,7 @@
 import json
 import os
 from supabase import create_client
-from supabase_auth.errors import AuthApiError
+from gotrue.errors import AuthApiError
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
