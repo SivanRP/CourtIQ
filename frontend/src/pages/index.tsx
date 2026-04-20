@@ -19,12 +19,18 @@ export default function LoginSignupPage() {
   const handleSubmit = async () => {
     setErrors({});
     if (isSignUp) {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup/`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(form),
-    });
-    const result = await response.json();
+    let response: Response, result: Record<string, string> = {};
+    try {
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup/`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(form),
+      });
+      result = await response.json();
+    } catch {
+      setErrors({general: "* Server error, please try again *"});
+      return;
+    }
     if (response.ok) {
       setIsSignUp(false);
       setForm({username: "", first_name: "", last_name: "", email: "", password: "", verify_password: "", role: ""});
@@ -43,12 +49,18 @@ export default function LoginSignupPage() {
       }
     }
   } else {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({username: form.username, password: form.password}),
-    });
-    const result = await response.json();
+    let response: Response, result: Record<string, string> = {};
+    try {
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({username: form.username, password: form.password}),
+      });
+      result = await response.json();
+    } catch {
+      setErrors({general: "* Server error, please try again *"});
+      return;
+    }
     if (response.ok) {
       const token = result.token;
       localStorage.setItem("token", token);

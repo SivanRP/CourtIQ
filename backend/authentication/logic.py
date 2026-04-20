@@ -66,7 +66,12 @@ def email_is_unique(email):
 def sign_up(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required"}, status=400)
+    try:
+        return _sign_up(request)
+    except Exception as e:
+        return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
 
+def _sign_up(request):
     data = json.loads(request.body)
     username = data.get("username")
     first_name = data.get("first_name")
