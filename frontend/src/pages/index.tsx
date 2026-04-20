@@ -15,7 +15,7 @@ export default function LoginSignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-
+  
   const handleSubmit = async () => {
     setErrors({});
     if (isSignUp) {
@@ -62,24 +62,23 @@ export default function LoginSignupPage() {
         setErrors({general: "* Invalid username or password *"})
       }
     }
-  }
-};
+  }};
 
-const handleForgotPassword = async () => {
-  setErrors({});
-  const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({email: form.email}),
-  });
-  const result = await response.json();
-  if (response.ok) {
-    setShowForgotPassword(false);
-    setSuccess("Password reset email sent! Please check your inbox.");
-  } else {
-    setErrors({general: "* " + result.error + " *"})
-  }
-};
+  const handleForgotPassword = async () => {
+    setErrors({});
+    const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: form.email}),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      setShowForgotPassword(false);
+      setSuccess("Password reset email sent successfully!");
+    } else {
+      setErrors({general: "* " + result.error + " *"})
+    }
+  };
 
   return (
     <div className={`${lato.className} flex flex-col min-h-screen items-center justify-center bg-[#1a261e] pb-16`}>
@@ -189,33 +188,6 @@ const handleForgotPassword = async () => {
           </div>
           {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
         </div>
-        
-        
-
-
-        {showForgotPassword && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
-              <h2 className={`${yesevaOne.className} text-white text-lg mb-4`}>Reset Password</h2>
-              <input
-                placeholder="Enter your email"
-                onChange={(e) => setForm(prev => ({...prev, email: e.target.value}))}
-                onKeyDown={evt => {if (evt.key == "Enter") evt.currentTarget.blur()}}
-                className="w-full px-4 py-3 mb-1 bg-[#121914] border border-[#c8a84b33] rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2"
-              />
-              <button
-                onClick={handleForgotPassword}
-                className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest cursor-pointer mt-2 transition-transform hover:scale-102 active:scale-100 active:brightness-75">
-                Send Reset Link
-              </button>
-              <button
-                onClick={() => setShowForgotPassword(false)}
-                className = "text-sm text-gray-400 hover:text-white mt-3">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
 
         {isSignUp && (
           <>
@@ -260,8 +232,8 @@ const handleForgotPassword = async () => {
       {success && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
-            <h3 className="text-white text-lg font-bold mb-2">
-              You are all signed up!
+            <h3 className={`${yesevaOne.className} text-white text-lg font-bold mb-2`}>
+              {success}
             </h3>
             <p className="text-[#9cbcd9] text-sm mb-6">
               Please click continue to proceed to login.
@@ -275,6 +247,29 @@ const handleForgotPassword = async () => {
         </div>
       )}
 
+      {showForgotPassword && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+            <div className="bg-[#1a261e] border border-[#c8a84b33] rounded-2xl p-11 w-[90%] max-w-100 text-center shadow-xl">
+              <h2 className={`${yesevaOne.className} text-white text-lg mb-4`}>Reset Password</h2>
+              <input
+                placeholder="Enter your email"
+                onChange={(e) => setForm(prev => ({...prev, email: e.target.value}))}
+                onKeyDown={evt => {if (evt.key == "Enter") evt.currentTarget.blur()}}
+                className="w-full px-4 py-3 mb-1 bg-[#121914] border border-[#c8a84b33] rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2"
+              />
+              <button
+                onClick={handleForgotPassword}
+                className="w-full py-3 bg-[#9cbcd9] text-[#121914] rounded-xl font-bold text-sm tracking-widest cursor-pointer mt-2 transition-transform hover:scale-102 active:scale-100 active:brightness-75">
+                Send Reset Link
+              </button>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className = "text-sm text-gray-400 hover:text-white mt-3">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
