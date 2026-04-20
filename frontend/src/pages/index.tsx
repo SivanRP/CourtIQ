@@ -189,6 +189,23 @@ export default function LoginSignupPage() {
           {errors.password && <p className="text-[#d5d131] text-xs mt-1"> {errors.password}</p>}
         </div>
 
+        {isSignUp && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-white text-sm">Confirm Password</label>
+              <input
+                placeholder="Confirm password"
+                type={showPassword ? "text" : "password"}
+                value={form.verify_password}
+                onChange={evt => setForm(prev => ({...prev, verify_password: evt.target.value}))}
+                onKeyDown={evt => {if (evt.key == "Enter") {handleSubmit(); evt.currentTarget.blur()}}}
+                className={`w-full px-4 py-3 bg-[#121914] border rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2 ${errors.verify_password ? "border-[#d5d131]" : "border-[#c8a84b33]"}`}
+              />
+              {errors.verify_password && <p className="text-[#d5d131] text-xs mt-1"> {errors.verify_password}</p>}
+            </div>
+          </>
+        )}
+
         {errors.general && <p className="text-[#d5d131] text-xs mt-1"> {errors.general}</p>}
 
         <button 
@@ -253,24 +270,6 @@ export default function LoginSignupPage() {
             </div>
           </div>
         )}
-
-        {isSignUp && (
-          <>
-            <div className="flex flex-col gap-1">
-              <label className="text-white text-sm">Confirm Password</label>
-              <input
-                placeholder="Confirm password"
-                type={showPassword ? "text" : "password"}
-                value={form.verify_password}
-                onChange={evt => setForm(prev => ({...prev, verify_password: evt.target.value}))}
-                onKeyDown={evt => {if (evt.key == "Enter") {handleSubmit(); evt.currentTarget.blur()}}}
-                className={`w-full px-4 py-3 bg-[#121914] border rounded-xl text-white outline-none hover:border-white focus:border-white focus:border-2 ${errors.verify_password ? "border-[#d5d131]" : "border-[#c8a84b33]"}`}
-              />
-              {errors.verify_password && <p className="text-[#d5d131] text-xs mt-1"> {errors.verify_password}</p>}
-            </div>
-          </>
-        )}
-
     </div>
   );
 }
