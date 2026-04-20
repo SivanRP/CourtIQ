@@ -1,12 +1,22 @@
 import os
+import socket
 from django.urls import path, include
 from django.http import JsonResponse
 
 def health(request):
+    url = os.environ.get("SUPABASE_URL", "NOT_SET").strip()
+    key = os.environ.get("SUPABASE_KEY", "NOT_SET").strip()
+    hostname = url.replace("https://", "").replace("http://", "").split("/")[0]
+    try:
+        ip = socket.gethostbyname(hostname)
+        dns = f"ok: {ip}"
+    except Exception as e:
+        dns = f"FAIL: {e}"
     return JsonResponse({
-        "status": "ok",
-        "supabase_url_set": bool(os.environ.get("SUPABASE_URL")),
-        "supabase_key_set": bool(os.environ.get("SUPABASE_KEY")),
+        "url_used": url[:50],
+        "key_prefix": key[:12],
+        "hostname": hostname,
+        "dns": dns,
     })
 
 urlpatterns = [
