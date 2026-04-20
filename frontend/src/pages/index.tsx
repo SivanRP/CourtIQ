@@ -44,8 +44,10 @@ export default function LoginSignupPage() {
         setErrors({verify_password: "* Passwords don't match *"});
       } else if (result.error == "All fields are required") {
         setErrors({general: "* Please fill in all fields *"});
-      } else if (result.error == "Failed to save profile") {
-        setErrors({general: "* Something went wrong, please try again *"});
+      } else if (result.error == "Email is not unique") {
+        setErrors({general: "* An account with this email already exists *"});
+      } else {
+        setErrors({general: `* ${result.error || "Something went wrong, please try again"} *`});
       }
     }
   } else {

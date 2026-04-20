@@ -119,8 +119,8 @@ def _sign_up(request):
             "role": role,
             "email": email
         }).execute()
-    except Exception as e:
-        return JsonResponse({"error": f"Failed to save profile: {str(e)}"}, status=400)
+    except Exception:
+        return JsonResponse({"error": "Failed to save profile"}, status=400)
 
     if not insert_response.data:
         return JsonResponse({"error": "Failed to save profile"}, status=400)
