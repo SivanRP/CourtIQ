@@ -20,6 +20,7 @@ _site/
 
 # Keys and dev-only files
 .env
+.env.local
 
 # Local database
 db.sqlite3
