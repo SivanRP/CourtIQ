@@ -4,7 +4,7 @@ from django.urls import path, include
 from django.http import JsonResponse
 
 def health(request):
-    url = os.environ.get("SUPABASE_URL", "NOT_SET").strip()
+    url = os.environ.get("SUPABASE_DB_URL", "NOT_SET").strip()
     key = os.environ.get("SUPABASE_KEY", "NOT_SET").strip()
     hostname = url.replace("https://", "").replace("http://", "").split("/")[0]
     try:

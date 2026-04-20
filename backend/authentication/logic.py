@@ -4,7 +4,7 @@ from supabase import create_client
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
-supabase_url = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co").strip()
+supabase_url = os.environ.get("SUPABASE_DB_URL", "https://placeholder.supabase.co").strip()
 supabase_key = os.environ.get("SUPABASE_KEY", "placeholder-key").strip()
 
 supabase = create_client(supabase_url, supabase_key)
