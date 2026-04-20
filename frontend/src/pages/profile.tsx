@@ -49,7 +49,7 @@ export default function ProfilePage() {
 
     const fetchLinked = async (role: string) => {
         setLoadingLinked(true);
-        const res = await getAuth("http://127.0.0.1:8000/api/auth/linked/", { method: "GET" }, router);
+        const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/linked/`, { method: "GET" }, router);
         if (res?.ok) {
             const data = await res.json();
             setLinked(role === "ATHLETE" ? (data.staff || []) : (data.athletes || []));
@@ -59,7 +59,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         const fetchProfile = async () => {
-            const res = await getAuth("http://127.0.0.1:8000/api/auth/get_profile/", { method: "GET" }, router);
+            const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/get_profile/`, { method: "GET" }, router);
             if (res?.ok) {
                 const data = await res.json();
                 setProfile(data.profile);
@@ -75,7 +75,7 @@ export default function ProfilePage() {
 
     const handleAdd = async () => {
         if (!searchUsername.trim()) return;
-        const res = await getAuth("http://127.0.0.1:8000/api/auth/link/", {
+        const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/link/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username: searchUsername }),
@@ -96,7 +96,7 @@ export default function ProfilePage() {
         if (!profile) return;
         const isStaff = profile.role === "HEAD_COACH" || profile.role === "COACHING_STAFF";
         const body = isStaff ? { athlete_id: userId } : { staff_id: userId };
-        const res = await getAuth("http://127.0.0.1:8000/api/auth/unlink/", {
+        const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/unlink/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),

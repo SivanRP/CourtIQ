@@ -1,20 +1,13 @@
 import json
+import os
 from supabase import create_client
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 
-#Parsing the .env file to get the key and the URL of the database
-env_variables = {}
-with open(".env") as file:
-    for line in file:
-        key, value = line.strip().split("=",1)
-        env_variables[key] = value.strip('"').strip("'")
+supabase_url = os.environ.get("DATABASE_URL", "")
+supabase_key = os.environ.get("DATABASE_KEY", "")
 
-supabase_url = env_variables["DATABASE_URL"]
-supabase_key = env_variables["DATABASE_KEY"]
-
-#Creating a client to access the Supabase database
 supabase = create_client(supabase_url, supabase_key)
 
 #Function for retrieving a Supabase user from a given auth token

@@ -84,7 +84,7 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchProfile = async () => {
             const res = await getAuth(
-                "http://127.0.0.1:8000/api/auth/get_profile/",
+                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/get_profile/`,
                 { method: "GET" },
                 router
             );
@@ -100,7 +100,7 @@ export default function Dashboard() {
         if (!isStaff) return;
         const fetchLinked = async () => {
             const res = await getAuth(
-                "http://127.0.0.1:8000/api/auth/linked/",
+                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/linked/`,
                 { method: "GET" },
                 router
             );
@@ -119,7 +119,7 @@ export default function Dashboard() {
         if (isStaff && !selectedAthleteId) return;
 
         setLoading(true);
-        let url = `http://127.0.0.1:8000/api/scheduling/statistics/?period=${period}`;
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/statistics/?period=${period}`;
         if (isStaff && selectedAthleteId) url += `&athlete_id=${selectedAthleteId}`;
 
         const response = await getAuth(url, { method: "GET" }, router);

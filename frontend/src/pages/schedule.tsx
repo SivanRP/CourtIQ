@@ -102,7 +102,7 @@ export default function SchedulePage() {
 
     useEffect(() => {
         const fetchProfile = async () => {
-            const res = await getAuth("http://127.0.0.1:8000/api/auth/get_profile/", { method: "GET" }, router);
+            const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/get_profile/`, { method: "GET" }, router);
             if (res?.ok) {
                 const data = await res.json();
                 setRole(data.profile.role);
@@ -115,7 +115,7 @@ export default function SchedulePage() {
     useEffect(() => {
         if (!role || role === "ATHLETE") return;
         const fetchLinked = async () => {
-            const res = await getAuth("http://127.0.0.1:8000/api/auth/linked/", { method: "GET" }, router);
+            const res = await getAuth(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/linked/`, { method: "GET" }, router);
             if (res?.ok) {
                 const data = await res.json();
                 const athletes: AthleteProfile[] = data.athletes || [];
@@ -136,7 +136,7 @@ export default function SchedulePage() {
         if (isStaff && selectedAthleteId) body.athlete_id = selectedAthleteId;
 
         const res = await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/get_weekly_schedule/",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/get_weekly_schedule/`,
             { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
             router
         );
@@ -171,7 +171,7 @@ export default function SchedulePage() {
 
     const handleApproveReject = async (eventId: string, action: "APPROVE" | "REJECT") => {
         await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/approve_reject_event/",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/approve_reject_event/`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -212,7 +212,7 @@ export default function SchedulePage() {
             if (isStaff) body.athlete_id = selectedAthleteId;
 
             const res = await getAuth(
-                "http://127.0.0.1:8000/api/scheduling/create_event/",
+                `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/create_event/`,
                 { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
                 router
             );
@@ -234,7 +234,7 @@ export default function SchedulePage() {
 
     const handleDeleteEvent = async (eventId: string) => {
         await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/delete_event/",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/delete_event/`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -276,7 +276,7 @@ export default function SchedulePage() {
         setEditError("");
         // We need to track which event is being edited
         const res = await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/edit_event/",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/edit_event/`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -316,7 +316,7 @@ export default function SchedulePage() {
         setSubmitting(true);
         setLogError("");
         const res = await getAuth(
-            "http://127.0.0.1:8000/api/scheduling/log_activity/",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/log_activity/`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

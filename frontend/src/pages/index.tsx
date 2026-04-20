@@ -19,7 +19,7 @@ export default function LoginSignupPage() {
   const handleSubmit = async () => {
     setErrors({});
     if (isSignUp) {
-    const response = await fetch("http://localhost:8000/api/auth/signup/", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup/`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(form),
@@ -43,7 +43,7 @@ export default function LoginSignupPage() {
       }
     }
   } else {
-    const response = await fetch("http://localhost:8000/api/auth/login/", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({username: form.username, password: form.password}),
@@ -66,7 +66,7 @@ export default function LoginSignupPage() {
 
   const handleForgotPassword = async () => {
     setErrors({});
-    const response = await fetch("http://localhost:8000/api/auth/reset_password/", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/reset_password/`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({email: form.email}),
