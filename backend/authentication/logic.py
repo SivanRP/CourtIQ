@@ -135,14 +135,16 @@ def log_in(request):
     if not username or not password:
         return JsonResponse({"error": "All fields are required"}, status=400)
 
-    profile = supabase.table("profiles").select("id, email").eq("username", username).execute()
+    try:
+        profile = supabase.table("profiles").select("id, email").eq("username", username).execute()
+    except Exception as e:
+        return JsonResponse({"error": f"DB error: {str(e)}"}, status=500)
 
     if not profile.data:
         return JsonResponse({"error": "Invalid username"}, status=400)
 
     email = profile.data[0]["email"]
 
-    #Try/Except for logging in with supabase.auth
     try:
         auth_response = supabase.auth.sign_in_with_password({
             "email": email,
@@ -150,8 +152,9 @@ def log_in(request):
         })
     except AuthApiError as e:
         return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": f"Auth error: {str(e)}"}, status=500)
 
-    #Returning access token for authenticated request
     return JsonResponse({"token": auth_response.session.access_token})
 
 #Log Out Logic:
