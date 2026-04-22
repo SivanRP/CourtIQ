@@ -57,6 +57,7 @@ export default function SchedulePage() {
         eventType: "TRAINING",
         repeat: false,
         repeatWeeks: "4",
+        result: "",
     });
     const [logForm, setLogForm] = useState({
         date: format(new Date(), "yyyy-MM-dd"),
@@ -210,6 +211,7 @@ export default function SchedulePage() {
                 event_type: form.eventType,
             };
             if (isStaff) body.athlete_id = selectedAthleteId;
+            if ((isMatch || form.eventType === "MATCH") && form.result) body.result = form.result;
 
             const res = await getAuth(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/scheduling/create_event/`,
@@ -227,7 +229,7 @@ export default function SchedulePage() {
         setSubmitting(false);
         if (!failed) {
             setShowEventModal(false);
-            setForm({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", endTime: "10:00", eventType: "TRAINING", repeat: false, repeatWeeks: "4" });
+            setForm({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", endTime: "10:00", eventType: "TRAINING", repeat: false, repeatWeeks: "4", result: "" });
             fetchEvents();
         }
     };
@@ -607,6 +609,18 @@ export default function SchedulePage() {
                                 </select>
                                 )}
                             </div>
+                            {(isMatch || form.eventType === "MATCH") && (
+                                <div>
+                                    <label className="text-[#9cbcd9] text-sm mb-1 block">Result</label>
+                                    <select value={form.result}
+                                        onChange={(e) => setForm({ ...form, result: e.target.value })}
+                                        className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]">
+                                        <option value="">Select result (optional)</option>
+                                        <option value="WIN">Win</option>
+                                        <option value="LOSS">Loss</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="flex items-center gap-3">
                                 <input
                                     type="checkbox"

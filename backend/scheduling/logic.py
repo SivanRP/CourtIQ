@@ -64,6 +64,7 @@ def create_event(request):
     start_time = data.get("start_time")
     end_time = data.get("end_time")
     event_type = data.get("event_type")
+    result = data.get("result")
 
     #Performing checks of the data provided by the user
     if not title or not start_time or not end_time or not event_type:
@@ -85,6 +86,15 @@ def create_event(request):
             "status": "CONFIRMED",
             "visibility": "BLOCKED" if event_type == "PERSONAL" else "FULL"
         }).execute()
+
+        if event_type == "MATCH" and result in ("WIN", "LOSS"):
+            match_date = start_time[:10]
+            supabase.table("match_statistics").insert({
+                "athlete_id": user_id,
+                "match_date": match_date,
+                "wins": 1 if result == "WIN" else 0,
+                "losses": 1 if result == "LOSS" else 0,
+            }).execute()
 
     elif user_role in ["COACHING_STAFF", "HEAD_COACH"]:
         athlete_id = data.get("athlete_id")
@@ -110,6 +120,15 @@ def create_event(request):
             "status": status,
             "visibility": "FULL"
         }).execute()
+
+        if event_type == "MATCH" and result in ("WIN", "LOSS"):
+            match_date = start_time[:10]
+            supabase.table("match_statistics").insert({
+                "athlete_id": athlete_id,
+                "match_date": match_date,
+                "wins": 1 if result == "WIN" else 0,
+                "losses": 1 if result == "LOSS" else 0,
+            }).execute()
 
     else:
         return JsonResponse({"error": "Invalid role"}, status=400)
