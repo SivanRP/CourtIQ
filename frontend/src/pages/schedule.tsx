@@ -78,6 +78,7 @@ export default function SchedulePage() {
         startTime: "",
         endTime: "",
         eventType: "TRAINING",
+        result: "",
     });
     const [eventToDelete, setEventToDelete] = useState<BackendEvent | null>(null);
     const [eventToReject, setEventToReject] = useState<BackendEvent | null>(null);
@@ -257,6 +258,7 @@ export default function SchedulePage() {
             startTime: format(start, "HH:mm"),
             endTime: format(end, "HH:mm"),
             eventType: event.event_type,
+            result: "",
         });
         setEditingEventId(event.id);
         setEditError("");
@@ -288,6 +290,7 @@ export default function SchedulePage() {
                     start_time: `${editForm.date}T${editForm.startTime}:00`,
                     end_time: `${editForm.date}T${editForm.endTime}:00`,
                     event_type: editForm.eventType,
+                    ...(editForm.eventType === "MATCH" && editForm.result ? { result: editForm.result } : {}),
                 }),
             },
             router
@@ -812,6 +815,18 @@ export default function SchedulePage() {
                                     ))}
                                 </select>
                             </div>
+                            {editForm.eventType === "MATCH" && (
+                                <div>
+                                    <label className="text-[#9cbcd9] text-sm mb-1 block">Result</label>
+                                    <select value={editForm.result}
+                                        onChange={(e) => setEditForm({ ...editForm, result: e.target.value })}
+                                        className="w-full bg-[#121914] border border-[#c8a84b33] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#9cbcd9]">
+                                        <option value="">Select result (optional)</option>
+                                        <option value="WIN">Win</option>
+                                        <option value="LOSS">Loss</option>
+                                    </select>
+                                </div>
+                            )}
                             {editError && <p className="text-red-400 text-sm">{editError}</p>}
                             <div className="flex gap-3 mt-2">
                                 <button onClick={() => { setShowEditModal(false); setEditError(""); }}

@@ -237,6 +237,7 @@ def edit_event(request):
     start_time = data.get("start_time", event_data["start_time"])
     end_time = data.get("end_time", event_data["end_time"])
     event_type = data.get("event_type", event_data["event_type"])
+    result = data.get("result")
 
     if datetime.fromisoformat(start_time) >= datetime.fromisoformat(end_time):
         return JsonResponse({"error": "Invalid time range"}, status=400)
@@ -249,6 +250,18 @@ def edit_event(request):
         "event_type": event_type,
         "visibility": "BLOCKED" if event_type == "PERSONAL" else "FULL"
     }).eq("id", event_id).execute()
+
+    if event_type == "MATCH" and result in ("WIN", "LOSS"):
+        athlete_id = event_data["athlete_id"]
+        old_date = event_data["start_time"][:10]
+        new_date = start_time[:10]
+        supabase.table("match_statistics").delete().eq("athlete_id", athlete_id).eq("match_date", old_date).execute()
+        supabase.table("match_statistics").insert({
+            "athlete_id": athlete_id,
+            "match_date": new_date,
+            "wins": 1 if result == "WIN" else 0,
+            "losses": 1 if result == "LOSS" else 0,
+        }).execute()
 
     return JsonResponse({"status": "success"})
 
