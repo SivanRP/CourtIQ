@@ -197,6 +197,15 @@ export default function Dashboard() {
         ],
     };
 
+    const winRateOptions = {
+        responsive: true,
+        plugins: { legend: { labels: { color: "#ffffff" } } },
+        scales: {
+            x: { ticks: { color: "#9cbcd9" }, grid: { color: "#1a261e" } },
+            y: { min: 0, ticks: { stepSize: 1, color: "#9cbcd9", precision: 0 }, grid: { color: "#1a261e" } },
+        },
+    };
+
     const selectedAthlete = linkedAthletes.find((a) => a.id === selectedAthleteId);
 
     return (
@@ -256,7 +265,7 @@ export default function Dashboard() {
                             <p className="text-[#d5d131] text-2xl font-bold mb-1">{winRate}%</p>
                             <p className="text-[#9cbcd9] text-xs mb-4">{totalWins}W – {totalLosses}L this period</p>
                             {totalWins + totalLosses > 0 ? (
-                                <Bar data={winRateData} options={chartOptions} />
+                                <Bar data={winRateData} options={winRateOptions} />
                             ) : (
                                 <p className="text-[#9cbcd9] text-sm text-center py-10">
                                     No match data for this period.
